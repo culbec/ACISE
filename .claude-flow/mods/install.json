@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "installedAt": "2026-10-07T18:52:17.510Z",
+  "files": {
+    "/home/culbec/uni/ACISE/.claude/settings.json": {
+      "plugins": [
+        "ruflo-mods@ruflo",
+        "ruflo-swarm@ruflo",
+        "ruflo-console@ruflo"
+      ],
+      "marketplace": true,
+      "env": true,
+      "claudeInstalled": [
+        "ruflo-swarm@ruflo"
+      ]
+    }
+  }
+}
