@@ -165,6 +165,7 @@ Output: `selected_features_<target>_<project>.json`, holding the feature list, s
 - Python ≥ 3.10, a virtual env (`python -m venv .venv`), and `requirements.txt` with pinned versions.
 - Extract only the CSVs from `ravenbuild_data.zip` into `data/raw/` (never the pickles), and keep `data/` out of git.
 - Complete the label-direction check and feature selection (above) first.
+- Time one GP run on atlasdb before the full experiment, then scale the population and generations to fit the budget of 5 folds × 10 seeds × 2 targets × number of projects.
 
 ### Libraries
 
@@ -174,7 +175,8 @@ Output: `selected_features_<target>_<project>.json`, holding the feature list, s
 | numpy, pandas | data handling, vectorised evaluation of programs |
 | scikit-learn | feature selection, scaling, metrics, decision-tree / random-forest references |
 | scipy | Kendall/Spearman, Wilcoxon test |
-| matplotlib | convergence plots, Pareto fronts, trade-off curves |
+| **plotly** (`plotly.express`, `plotly.graph_objects`) | all graphs (see *Plotting* below) |
+| kaleido | static PNG/SVG export of plotly figures for the report |
 | jupyter | notebooks |
 
 `gplearn` is not used, because its `SymbolicClassifier` evolves numeric expressions, not typed boolean flow-control programs.
@@ -235,6 +237,29 @@ Optional cost-aware variant: `saved_builds − α · missed_failures`. Sweep `α
 
 Caveat to report: (b) is not independent of (a), because it is derived from (a)'s programs. The comparison measures how much performance survives when a human simplifies the program, not human intuition against evolution.
 
+## Plotting (plotly)
+
+All graphs use **plotly**; matplotlib is not used.
+
+- Use `plotly.express` by default, since it takes a tidy pandas DataFrame and needs one call per chart. Use `plotly.graph_objects` only when you need to overlay traces, such as a mean line with a std band, or the Pareto front plus the selected point plus program (b).
+- Set the theme once, in `src/plots.py`: `pio.templates.default = "plotly_white"`. Put shared helpers in the same file, for example a `save(fig, name)` that writes both `fig.write_html(...)` and `fig.write_image(...)` to `results/figures/`.
+- **Rendering caveat:** GitHub's notebook viewer, and many PDF exports, do not show interactive plotly output. For the deliverable notebooks, set `pio.renderers.default = "notebook+png"`, or save PNGs with kaleido and embed those.
+
+| Notebook | Figure | plotly call |
+|---|---|---|
+| 01_eda | label balance per project; fail-streak lengths | `px.bar`, `px.histogram` |
+| 01_eda | feature distributions by label (log axis for churn) | `px.box` / `px.violin` with `color="label"`, `log_y=True` |
+| 02_feature_selection | correlation matrix (redundancy pruning) | `px.imshow(corr, zmin=-1, zmax=1, color_continuous_scale="RdBu_r")` |
+| 02_feature_selection | relevance score per feature, by statistic | `px.bar(..., barmode="group")` |
+| 02_feature_selection | selection stability over bootstraps | `px.bar` (selection frequency) |
+| 03_gp | convergence: best and mean fitness per generation, ±std over seeds | `go.Scatter` lines plus a `fill="tonexty"` band, one facet per fold |
+| 03_gp | Pareto front (TPR against FPR), with the chosen point marked | `px.scatter` plus a `go.Scatter` marker |
+| 03_gp | program size (statements) against fitness | `px.scatter` |
+| 03_gp | feature frequency in the hall of fame | `px.bar` |
+| 05_results | per-fold metrics: GP (a) vs program (b) vs baselines | `px.box` / `px.strip` with `facet_col="metric"` |
+| 05_results | `% builds saved` against `% failures caught` trade-off (α sweep), with (b) as a point | `px.line(markers=True)` plus a `go.Scatter` marker |
+| 05_results | confusion matrices | `px.imshow(cm, text_auto=True)` |
+
 ## Suggested layout
 
 ```
@@ -245,6 +270,8 @@ src/
   gp.py         DEAP primitive set, fitness variants, run loop
   rules.py      hand-written program for (b)
   evaluate.py   shared metrics, domain metrics, statistical tests
+  plots.py      plotly theme + save helper
+results/figures/  exported HTML/PNG figures
 notebooks/
   01_eda.ipynb
   02_feature_selection.ipynb
@@ -252,15 +279,6 @@ notebooks/
   04_handwritten.ipynb
   05_results.ipynb
 ```
-
-## Open questions
-
-- [ ] Label direction in `now_label`. Check this before anything else.
-- [ ] Headline fitness: single-objective MCC or NSGA-II (TPR/FPR)?
-- [ ] Final `N`: within 15–20, decided by feature selection.
-- [ ] Per-project only, or also pooled / cross-project?
-- [ ] Is T2 (first failures) large enough per test fold? atlasdb gives roughly 60–100 per fold, while smaller projects may need `n_splits=3`.
-- [ ] Compute budget: 5 folds × 10 seeds × 2 targets × projects. Time one GP run on atlasdb first, then scale the population and generations to fit.
 
 ## Reading list
 

@@ -231,3 +231,7 @@ __marimo__/
 .claude-flow/
 .swarm/
 ruvector.db
+
+# Data
+projects/**/data/raw
+projects/**/data/*.zip

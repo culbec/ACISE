@@ -1,0 +1,28 @@
+[project]
+name = "acise-p1-cigp"
+version = "0.1.0"
+description = "ACISE Project 1: CI Build Failure Prediction using GP"
+authors = [
+    { name = "culbec", email = "profir.alexx@gmail.com" }
+]
+requires-python = ">=3.14.8"
+dependencies = [
+    "deap>=1.4.4",
+    "jupyter>=1.1.1",
+    "kaleido>=1.5.0",
+    "numpy>=2.5.4",
+    "pandas>=3.0.6",
+    "plotly>=7.1.0",
+    "requests>=2.34.2",
+    "rich>=15.0.0",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
+]
+
+[project.scripts]
+cigp = "acise_p1_cigp:main"
+download-data = "acise_p1_cigp.utils.data.download_data:main"
+
+[build-system]
+requires = ["uv_build>=0.13.1,<0.14.0"]
+build-backend = "uv_build"
