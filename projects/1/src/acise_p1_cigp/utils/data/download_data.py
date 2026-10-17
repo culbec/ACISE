@@ -1,3 +1,4 @@
+import argparse
 import pathlib
 import sys
 import zipfile
@@ -16,7 +17,9 @@ DATA_URLS_FILE: str = "data_urls.txt"
 # Only these CSVs are extracted.
 ALLOWED_SUFFIX: str = ".csv"
 ALLOWED_DIR: str = "circleci_repos/features/"
-ALLOWED_FILES: frozenset[str] = frozenset({})
+ALLOWED_FILES: frozenset[str] = frozenset(
+    {"circleci_java_builds.csv", "general_java_repo_information.csv"}
+)
 
 CHUNK_SIZE: int = 1 << 20
 
@@ -81,7 +84,9 @@ def _fetch(session: requests.Session, url: str, out: pathlib.Path) -> None:
     tmp.replace(out)
 
 
-def download_data(data_urls: list[str]) -> tuple[list[str], list[str]]:
+def download_data(
+    data_urls: list[str], force: bool = False
+) -> tuple[list[str], list[str]]:
     """Download every URL into DATA_DIR; unpack zips into RAW_DIR (CSVs only).
 
     Returns (successful urls, failed urls).
@@ -92,7 +97,7 @@ def download_data(data_urls: list[str]) -> tuple[list[str], list[str]]:
     for url in data_urls:
         try:
             out = DATA_DIR / _filename(url)
-            if out.exists():
+            if out.exists() and not force:
                 log.print(f"{out.name} already downloaded, skipping fetch.")
             else:
                 _fetch(session, url, out)
@@ -110,7 +115,22 @@ def download_data(data_urls: list[str]) -> tuple[list[str], list[str]]:
     return succ, failed
 
 
+def prepare_parser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--force",
+        action="store_true",
+        help="Force refetching of data, even if zip exists",
+        dest="force",
+    )
+
+    return ap
+
+
 def main() -> None:
+    ap = prepare_parser()
+    args = ap.parse_args()
+
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     urls_file = DATA_DIR / DATA_URLS_FILE
@@ -125,7 +145,7 @@ def main() -> None:
     if not data_urls:
         die(f"No URLs present in {DATA_URLS_FILE}!")
 
-    succ, failed = download_data(data_urls)
+    succ, failed = download_data(data_urls, force=args.force)
     log.print("Done!", f"Successful: {succ}", f"Failed: {failed}")
 
     sys.exit(1 if failed else 0)

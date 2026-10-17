@@ -235,3 +235,4 @@ ruvector.db
 # Data
 projects/**/data/raw
 projects/**/data/*.zip
+projects/**/data/*.zip.part
