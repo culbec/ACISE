@@ -52,7 +52,9 @@ def load_project(name: str) -> pd.DataFrame:
     )
 
 
-def preprocess(df: pd.DataFrame, target: Target, name: str = "") -> Dataset:
+def preprocess(
+    df: pd.DataFrame, target: Target, name: str = "", dev_fraction: float | None = None
+) -> Dataset:
     """Stateless preprocessing of a (sorted) frame from ``load_project``."""
     if target not in ("T1", "T2"):
         raise ValueError(f"target must be 'T1' or 'T2', got {target!r}")
@@ -73,4 +75,9 @@ def preprocess(df: pd.DataFrame, target: Target, name: str = "") -> Dataset:
         "n_rows": len(X),
         "n_failed": int(y.sum()),
     }
+    dev_fraction = (
+        DEV_FRACTION
+        if (dev_fraction is None or (dev_fraction < 0.0 or dev_fraction > 1.0))
+        else dev_fraction
+    )
     return Dataset(X=X, y=y, dev_end=int(len(X) * DEV_FRACTION), meta=meta)
