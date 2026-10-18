@@ -13,8 +13,11 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "deap" },
+    { name = "ipykernel" },
     { name = "jupyter" },
     { name = "kaleido" },
+    { name = "nbclient" },
+    { name = "nbconvert" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "plotly" },
@@ -27,8 +30,11 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "deap", specifier = ">=1.4.4" },
+    { name = "ipykernel", specifier = ">=7.4.0" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "kaleido", specifier = ">=1.5.0" },
+    { name = "nbclient", specifier = ">=0.11.0" },
+    { name = "nbconvert", specifier = ">=7.17.2" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "pandas", specifier = ">=3.0.6" },
     { name = "plotly", specifier = ">=7.1.0" },

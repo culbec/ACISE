@@ -8,12 +8,12 @@ One place for every figure in the plan's plotting table, so notebooks call a sin
 
 ## What it does
 
-- Sets `pio.templates.default = "plotly_white"` and `pio.renderers.default = "notebook+png"` on import. The PNG renderer is there because GitHub's notebook viewer and PDF exports drop interactive output.
+- `viz/__init__.py` sets `pio.templates.default = "plotly_white"` and `pio.renderers.default = "notebook+png"` on package import. The PNG renderer is there because GitHub's notebook viewer and PDF exports drop interactive output.
 - `save(fig, name, png=True)` writes `results/figures/<name>.html` and `<name>.png` (kaleido).
 - One helper per figure, grouped by notebook:
   - 01_eda: `label_balance`, `streak_hist`, `dist_by_label`
   - 02_feature_selection: `corr_heatmap`, `scores_bar`, `stability_bar`
-  - 03_gp: `convergence`, `pareto`, `size_vs_fitness`, `feature_freq`
+  - 03_gp: `convergence`, `pareto`, `size_vs_fitness`, `feature_freq_performers`
   - 05_results: `metrics_box`, `tradeoff`, `confusion`
 
 ## The plots: what each shows and when to use it
@@ -67,7 +67,7 @@ Notebook numbers refer to the layout in the main plan. "Input" is what the calle
 - Use it to check the `λ · statements / N` penalty is doing something: you want to see whether bigger programs buy fitness, and where the gain stops. It is the justification for choosing `N`.
 - Input: columns `statements`, `fitness`, one row per evaluated program (for example, per hall-of-fame member).
 
-**`feature_freq(freq)`** — bar per feature of how often it appears in hall-of-fame programs.
+**`feature_freq_performers(freq)`** — bar per feature of how often it appears in hall-of-fame programs.
 - Use it before writing program (b). Features that recur across programs are the building blocks of the hand-written structure.
 - Input: a Series indexed by feature with counts, from `gp/simplify.motifs`.
 
