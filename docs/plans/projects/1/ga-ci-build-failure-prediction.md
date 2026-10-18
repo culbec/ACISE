@@ -262,6 +262,8 @@ All graphs use **plotly**; matplotlib is not used.
 
 ## Suggested layout
 
+The module breakdown, implementation order and leakage boundaries are in [implementation-backbone.md](implementation-backbone.md). The tree below is the original sketch.
+
 ```
 data/raw/       extracted RavenBuild CSVs (gitignored)
 src/
