@@ -16,7 +16,7 @@ load_project(name: str, target: Literal["T1", "T2"]) -> Dataset
 
 - `X: pd.DataFrame`: features only, in chronological order.
 - `y: pd.Series`: `failed = 1`, `passed = 0`, same index as `X`.
-- `dev_end: int`: row position where the dev segment ends (first ~20%).
+- `dev_mask: np.ndarray`: boolean, True on the dev segment (first ~20% of each project).
 - `meta`: project name, target, row counts, failure counts.
 
 ## Steps, in order
@@ -26,7 +26,7 @@ load_project(name: str, target: Literal["T1", "T2"]) -> Dataset
 3. Drop leakage columns: `build_duration`.
 4. Remap `now_label` to `y` after the label-direction check (below).
 5. T1: keep all rows. T2: keep rows with `last_label = pass`, then drop `last_label` because it is constant.
-6. Compute `dev_end` on the filtered frame (after the T2 filter), so dev is 20% of the rows that are actually modelled.
+6. Compute `dev_mask` on the filtered frame (after the T2 filter), so dev is 20% of the rows that are actually modelled.
 
 ## Not done here
 
@@ -40,7 +40,7 @@ Imputation, scaling, variance filtering, and feature selection. They are fitted 
 
 ## Verification
 
-Small test on a fixture CSV: sort order, dropped columns, label remap, T2 filter, `dev_end`.
+Small test on a fixture CSV: sort order, dropped columns, label remap, T2 filter, `dev_mask`.
 
 ## Open points
 

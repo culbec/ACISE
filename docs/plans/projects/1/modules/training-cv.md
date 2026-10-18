@@ -20,7 +20,7 @@ run_cv(ds, features, fit_predict, n_splits=5, seeds=range(10)) -> pd.DataFrame
 
 ## Split logic
 
-1. `ds` rows are already chronological, and rows before `dev_end` are the dev segment.
+1. `ds` rows are already chronological, and rows where `ds.dev_mask` is True are the dev segment.
 2. `TimeSeriesSplit(n_splits)` runs over the rows after `dev`. The dev rows are prepended to every fold's train.
 3. In each fold the last 20% of train becomes the inner validation split (early stopping, picking the final program).
 4. Each test fold is used once.

@@ -24,7 +24,7 @@ Each stage is its own function so notebooks can plot the intermediate results:
 
 ## Design decisions
 
-- Input is `X[:dev_end]` only. The function takes the dev slice and has no access to later rows.
+- Input is `X[ds.dev_mask]` only. The function takes the dev slice and has no access to later rows.
 - Time series: bootstrap resamples contiguous blocks, not single rows, so the dependence between neighbouring builds is kept. This is the one place I deviate from the plan's wording ("bootstrap resamples of train"), and I'll flag it in the code.
 - Run separately for T1 and T2. On T1, `last_label` is kept, and the notebook reports results with and without it.
 - Scaling and imputation used inside the selection are local to it and are not returned. `training/cv.py` re-fits its own.

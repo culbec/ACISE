@@ -7,6 +7,7 @@ from acise_p1_cigp.data.load import PASS_LABEL, preprocess
 def frame():
     return pd.DataFrame(
         {
+            "project": "p",
             "build_nums": [3, 1, 2, 5, 4],
             "now_label": [1, 1, 0, 0, 1],
             "last_label": [1, 1, 1, 0, 0],
@@ -21,7 +22,7 @@ def test_t1():
     assert list(d.X.columns) == ["last_label", "src_churn"]
     assert list(d.X.src_churn) == [10, 20, 30, 40, 50]  # chronological
     assert list(d.y) == [0, 1, 0, 0, 1]  # failed = (now_label != PASS)
-    assert d.dev_end == 1
+    assert d.dev_mask.sum() == 1
 
 
 def test_t2():
