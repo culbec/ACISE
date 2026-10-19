@@ -178,6 +178,44 @@ def stability_bar(freq: pd.Series) -> go.Figure:
     )
 
 
+def drift_heatmap(kept: pd.DataFrame, gap: int = 2) -> go.Figure:
+    """
+    Feature x fold grid: whether each frozen feature (or a near-duplicate) is still
+    selected on that fold's train. Cells are separated by `gap` pixels, so every
+    feature row and fold column has a visible border.
+
+    Args:
+        kept (pd.DataFrame): boolean feature x fold table (`analysis.features.drift`).
+        gap (int): border width in pixels between cells.
+
+    Returns:
+        go.Figure: two-color grid, one row per feature, one column per fold.
+    """
+    fig = px.imshow(
+        kept.astype(int),
+        zmin=0,
+        zmax=1,
+        aspect="auto",
+        color_continuous_scale=[(0, "#d7301f"), (0.5, "#d7301f"), (0.5, "#1a9850"), (1, "#1a9850")],
+    )
+    return (
+        fig.update_traces(
+            xgap=gap,
+            ygap=gap,
+            text=np.where(kept, "kept", "lost"),
+            texttemplate="%{text}",
+            hovertemplate="%{y} | %{x}: %{text}<extra></extra>",
+        )
+        .update_coloraxes(showscale=False)
+        .update_layout(
+            plot_bgcolor="black",
+            height=max(300, 32 * len(kept) + 120),
+            xaxis=dict(side="top", showgrid=False),
+            yaxis=dict(showgrid=False),
+        )
+    )
+
+
 # ==============================
 # Genetic Programming plots
 # ==============================
