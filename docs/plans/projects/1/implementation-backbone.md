@@ -13,7 +13,7 @@ Package root: `projects/1/src/acise_p1_cigp/`.
 | 2 | `analysis/features.py` | [analysis-features](modules/analysis-features.md) | done | Feature selection on the dev segment: clean, relevance ranks, mRMR pruning, block-subsample stability with a `min_freq` threshold (cap N), embedded check, per-fold drift diagnostic. Writes `selected_features_<target>_<project>.json`. |
 | 3a | `metrics/metrics.py` | [metrics](modules/metrics.md) | done | Precision, recall, F1, MCC, accuracy, confusion matrix, TPR/FPR, `% builds saved`, `% failures caught`; baselines (Parrot, majority class). |
 | 3b | `training/cv.py` | [training-cv](modules/training-cv.md) | done | Expanding-window `TimeSeriesSplit` after the dev segment, dev prepended to each train, inner validation split, per-fold scaling and imputation, seed loop. Takes a `fit_predict` callable, so it does not depend on GP. |
-| 3c | `stats/tests.py` | [stats-tests](modules/stats-tests.md) | todo | Wilcoxon signed-rank, Vargha–Delaney A₁₂, mean ± std tables. |
+| 3c | `stats/tests.py` | [stats-tests](modules/stats-tests.md) | done | Wilcoxon signed-rank, Vargha–Delaney A₁₂, mean ± std tables. |
 | 4a | `gp/engine.py` | [gp-engine](modules/gp-engine.md) | todo | DEAP typed primitive set, statement limit, single-objective and NSGA-II fitness, run loop, hall of fame. |
 | 4b | `gp/simplify.py` | [gp-simplify](modules/gp-simplify.md) | todo | Program simplification, statement counting, pretty-printing, recurring-structure counts. |
 | 5 | `solutions/flow_control/model.py` | [solutions-flow-control-model](modules/solutions-flow-control-model.md) | owner: user | Program (b), written by the user. Claude supplies only supporting helpers if asked (simplification, per-fold threshold tuning). |
