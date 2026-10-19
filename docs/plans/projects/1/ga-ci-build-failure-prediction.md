@@ -111,7 +111,7 @@ dev | fold 2: train ▓▓▓▓▓▓▓▓▓▓    test ░░
 - Optional sensitivity check: a single 2/3–1/3 temporal holdout, as in RavenBuild, to compare with the CV numbers.
 - **Metrics** (fail class): precision, recall, F1, MCC, accuracy, and the confusion matrix. Also explain why accuracy misleads under class imbalance.
 - **Domain metrics:** `% builds saved` and `% failures caught`.
-- **Reference points:** Parrot (`prediction = last_label`; trivial on T2), a majority-class predictor, and a depth-limited `DecisionTreeClassifier` using the same `N` features.
+- **Reference points:** Parrot (`prediction = last_label`; trivial on T2) and a majority-class predictor. No standard-ML baseline: the aim is to expose how GP and the flow-control program are used, not to rank them against other learners.
 - **Stochasticity:** run 10 independent GP runs per fold with different seeds, giving 5 × 10 = 50 runs per project and target. Report mean ± std over all runs and per fold.
 - **Statistics:** compare (a) and (b) with a Wilcoxon signed-rank test on the paired per-fold scores. Use the GP's per-fold median over its seeds. With 5 folds the test has low power, so also report effect size (Vargha–Delaney A₁₂) and where (b) falls within the GP's distribution in each fold.
 
@@ -173,7 +173,7 @@ Output: `selected_features_<target>_<project>.json`, holding the feature list, s
 |---|---|
 | **DEAP** (`deap.gp`, `deap.tools`, `deap.algorithms`) | GP framework: strongly typed primitive sets, tree generation, crossover/mutation, bloat limits, NSGA-II selection (`tools.selNSGA2`) |
 | numpy, pandas | data handling, vectorised evaluation of programs |
-| scikit-learn | feature selection, scaling, metrics, decision-tree / random-forest references |
+| scikit-learn | feature selection, scaling, metrics, random-forest embedded check |
 | scipy | Kendall/Spearman, Wilcoxon test |
 | **plotly** (`plotly.express`, `plotly.graph_objects`) | all graphs (see *Plotting* below) |
 | kaleido | static PNG/SVG export of plotly figures for the report |
