@@ -21,6 +21,10 @@ LEAKAGE_COLS = ("build_duration",)  # only known after the build runs
 # We assume that most builds succeeds in CI runs, so 1 seems fair.
 PASS_LABEL = 1
 
+# ``line_added`` is -1 when a build has a commit missing from the extractor's commit
+# dump (RavenBuild ``get_line_added``); it is a missing-value marker, not a count.
+MISSING_SENTINELS = {"line_added": -1}
+
 # The fraction of features used in development mode.
 DEV_FRACTION = 0.2
 
@@ -92,6 +96,8 @@ def preprocess(
     if target == "T2":
         drop.append(PREV_LABEL_COL)  # constant on T2
     X = df.drop(columns=drop)
+    for col, sentinel in MISSING_SENTINELS.items():
+        X[col] = X[col].replace(sentinel, np.nan)
 
     # first dev_fraction of each project; rows are already chronological per project
     by_project = df.groupby("project")["project"]
