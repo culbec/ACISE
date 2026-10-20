@@ -6,7 +6,7 @@ import pytest
 from deap import gp
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import QuantileTransformer
 
 from acise_p1_cigp.gp.engine import (
     GPConfig,
@@ -83,7 +83,7 @@ def test_score_and_constant_predict():
 def raw_frame(n=400, seed=0):
     rng = np.random.default_rng(seed)
     raw = pd.DataFrame(rng.integers(0, 50, (n, 3)).astype(float), columns=list("abc"))
-    prep = make_pipeline(SimpleImputer(strategy="median"), MinMaxScaler())
+    prep = make_pipeline(SimpleImputer(strategy="median"), QuantileTransformer(n_quantiles=200))
     prep.set_output(transform="pandas").fit(raw)
     return raw, prep, prep.transform(raw)
 
@@ -99,7 +99,7 @@ def test_simplify_preserves_predictions_and_to_python_matches():
         assert np.array_equal(predict(s, pset, X), expected), str(t)
         assert statements(s) <= statements(t)
         ns: dict = {}
-        exec(to_python(t, pset, prep), ns)
+        exec(to_python(t, pset, prep), ns)  # noqa: S102 - our own generated source
         got = np.array([ns["predict"](r) for _, r in raw.iterrows()], dtype=bool)
         assert np.array_equal(got, expected), str(t)
 

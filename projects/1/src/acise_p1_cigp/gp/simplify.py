@@ -1,5 +1,8 @@
+import inspect
 import operator
+import re
 
+import numpy as np
 import pandas as pd
 from deap import gp
 from sklearn.pipeline import Pipeline
@@ -167,13 +170,69 @@ def simplify(tree, pset: gp.PrimitiveSetTyped) -> gp.PrimitiveTree:
     return gp.PrimitiveTree.from_string(_fmt(_rewrite(_nest(tree))), pset)
 
 
+def pct(x, q):
+    """
+    Percentile of `x` among the fit rows, exactly as the fold's uniform
+    `QuantileTransformer` maps one column. Also printed into `to_python` output.
+
+    Args:
+        x: raw value.
+        q: the column's `quantiles_` (fit-row knots, ascending).
+
+    Returns:
+        float: value in [0, 1].
+    """
+    q = np.asarray(q, dtype=float)
+    if x <= q[0]:
+        return 0.0
+    if x >= q[-1]:
+        return 1.0
+    r = np.linspace(0, 1, len(q))
+    return float(0.5 * (np.interp(x, q, r) - np.interp(-x, -q[::-1], -r[::-1])))
+
+
+def _raw_threshold(op: str, t: float, q: np.ndarray):
+    """
+    `pct(x, q) op t` as a condition on raw `x`. `pct` jumps at tied knots and is
+    linear in between, so the boundary is a knot or a linear inverse inside the
+    first knot interval where the condition holds.
+
+    Args:
+        op (str): lt, le, gt or ge.
+        t (float): scaled threshold.
+        q (np.ndarray): the column's `quantiles_`.
+
+    Returns:
+        bool | tuple[str, float]: constant, or `(op, raw threshold)` on `x`.
+    """
+    if op in ("lt", "le"):  # negation of ge / gt
+        out = _raw_threshold(NEG[op], t, q)
+        return (not out) if isinstance(out, bool) else (NEG[out[0]], out[1])
+    u = np.unique(q)
+    k = next((i for i, c in enumerate(u) if CMP[op](pct(c, q), t)), None)
+    if k is None:
+        return False
+    if k == 0:  # pct is 0 up to the first knot, so the condition holds everywhere
+        return True
+    lo, hi = u[k - 1], u[k]
+    f1, f2 = pct(lo + (hi - lo) / 3, q), pct(lo + 2 * (hi - lo) / 3, q)
+    left, right = 2 * f1 - f2, 2 * f2 - f1  # one-sided limits of the linear piece
+    if left >= t:  # interior values are all above left
+        return ("gt", float(lo))
+    if t >= right:
+        return ("ge", float(hi))
+    return (op, float(lo + (t - left) / (right - left) * (hi - lo)))
+
+
 def _cond(e, prep: Pipeline) -> str:
     """
-    Nested expression to a Python expression over raw feature values.
+    Nested expression to a Python expression over raw feature values. A threshold
+    becomes a raw-unit threshold; a feature-vs-feature comparison compares the two
+    within-fit percentiles (`pct`, quantile knots in `Q`).
 
     Args:
         e: simplified nested expression.
-        prep (Pipeline): fold pipeline; its last step is the `MinMaxScaler`.
+        prep (Pipeline): fold pipeline; its last step is the `QuantileTransformer`.
 
     Returns:
         str: Python expression on `build`.
@@ -188,16 +247,15 @@ def _cond(e, prep: Pipeline) -> str:
     if op == "if_then_else":
         c, a, b = (_cond(x, prep) for x in args)
         return f"({a} if {c} else {b})"
-    scaler = prep[-1]
-    col = {str(f): i for i, f in enumerate(scaler.feature_names_in_)}
+    qt = prep[-1]
+    col = {str(f): i for i, f in enumerate(qt.feature_names_in_)}
     a, b = args
     if isinstance(b, float):
-        i = col[a]
-        return f'build["{a}"] {SYMBOL[op]} {(b - scaler.min_[i]) / scaler.scale_[i]:.6g}'
-    i, j = col[a], col[b]
-    left = f'(build["{a}"] * {scaler.scale_[i]:.6g} + {scaler.min_[i]:.6g})'
-    right = f'(build["{b}"] * {scaler.scale_[j]:.6g} + {scaler.min_[j]:.6g})'
-    return f"{left} {SYMBOL[op]} {right}"
+        out = _raw_threshold(op, b, qt.quantiles_[:, col[a]])
+        if isinstance(out, bool):
+            return str(out)
+        return f'build["{a}"] {SYMBOL[out[0]]} {out[1]:.6g}'
+    return f'pct(build["{a}"], Q["{a}"]) {SYMBOL[op]} pct(build["{b}"], Q["{b}"])'
 
 
 def _block(e, prep: Pipeline, depth: int) -> list[str]:
@@ -229,7 +287,8 @@ def to_python(
 ) -> str:
     """
     Simplified program as Python source over raw units, thresholds mapped back with
-    the fold's scaler and printed with 6 significant digits.
+    the fold's scaler and printed with 6 significant digits. Feature-vs-feature
+    comparisons have no raw-unit form; they come with `pct` and the knots `Q`.
 
     Args:
         tree: DEAP tree.
@@ -242,7 +301,14 @@ def to_python(
     """
     t = simplify(tree, pset)
     head = [f"def {name}(build) -> bool:", f'    """{statements(t)} statements."""']
-    return "\n".join(head + _block(_rewrite(_nest(t)), prep, 1)) + "\n"
+    src = "\n".join(head + _block(_rewrite(_nest(t)), prep, 1)) + "\n"
+    used = dict.fromkeys(re.findall(r'Q\["([^"]+)"\]', src))
+    if not used:
+        return src
+    qt = prep[-1]
+    col = {str(f): i for i, f in enumerate(qt.feature_names_in_)}
+    knots = {f: qt.quantiles_[:, col[f]].tolist() for f in used}
+    return f"import numpy as np\n\nQ = {knots!r}\n\n\n{inspect.getsource(pct)}\n\n{src}"
 
 
 def _comparisons(e):
@@ -272,7 +338,8 @@ def motifs(trees) -> pd.DataFrame:
         trees: DEAP trees, e.g. a hall of fame.
 
     Returns:
-        pd.DataFrame: feature, op, count, thr_min, thr_median, thr_max (scaled),
+        pd.DataFrame: feature, op, count, thr_min, thr_median, thr_max (scaled:
+            within-fit percentiles),
             sorted by count descending.
     """
     rows = [

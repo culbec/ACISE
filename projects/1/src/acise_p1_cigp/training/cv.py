@@ -6,10 +6,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-from sklearn.impute import SimpleImputer
-from sklearn.model_selection import TimeSeriesSplit
-from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.preprocessing import MinMaxScaler
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -18,6 +14,10 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
+from sklearn.impute import SimpleImputer
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.preprocessing import QuantileTransformer
 
 from acise_p1_cigp.data.load import Dataset
 from acise_p1_cigp.metrics.metrics import domain, scores
@@ -45,8 +45,9 @@ class Fold:
 class Split:
     """
     What a model's ``fit_predict`` receives for one fold. ``X_*`` hold the selected
-    features, median-imputed and min-max scaled by ``prep``, which is fitted on the
-    fit rows only (test values may fall outside [0, 1]).
+    features, median-imputed and quantile-scaled to [0, 1] by ``prep``, which is
+    fitted on the fit rows only: a value reads as its percentile among the fit rows
+    (val and test values outside the fit range are clipped to 0 or 1).
     """
 
     X_fit: pd.DataFrame
@@ -57,7 +58,7 @@ class Split:
     raw_test: (
         pd.DataFrame
     )  # unscaled ds.X test rows, all columns (Parrot reads last_label)
-    prep: Pipeline  # maps raw units to scaled space
+    prep: Pipeline  # imputer, then QuantileTransformer: raw units to percentiles
 
 
 @dataclass(frozen=True)
@@ -106,9 +107,12 @@ def prepare(ds: Dataset, features: list[str], fold: Fold) -> Split:
     """
     Fit imputation and scaling on the fold's fit rows; apply them to val and test.
     """
-    # keep_empty_features: an all-NaN column on fit must not shift the columns
+    # keep_empty_features: an all-NaN column on fit must not shift the columns.
+    # Quantile, not min-max: heavy-tailed counts would sit near 0, where U(0, 1)
+    # GP thresholds rarely land.
     prep = make_pipeline(
-        SimpleImputer(strategy="median", keep_empty_features=True), MinMaxScaler()
+        SimpleImputer(strategy="median", keep_empty_features=True),
+        QuantileTransformer(n_quantiles=min(200, len(fold.fit))),
     ).set_output(transform="pandas")
     X = ds.X[features]
     return Split(

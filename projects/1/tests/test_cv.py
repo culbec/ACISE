@@ -57,7 +57,7 @@ def test_scaler_fitted_on_fit_rows_only():
     spiked = prepare(dataclasses.replace(ds, X=X), ["a", "b"], f)
     clean = prepare(ds, ["a", "b"], f)
     pd.testing.assert_frame_equal(spiked.X_fit, clean.X_fit)
-    assert spiked.X_test["b"].max() > 1  # not clipped
+    assert spiked.X_test["b"].max() == 1  # quantile scaling clips to the fit range
     assert not spiked.X_fit.isna().any().any()  # imputed
 
 

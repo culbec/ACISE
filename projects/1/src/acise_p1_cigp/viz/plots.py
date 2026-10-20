@@ -1,5 +1,5 @@
 import pathlib
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -212,8 +212,8 @@ def drift_heatmap(kept: pd.DataFrame, gap: int = 2) -> go.Figure:
         .update_layout(
             plot_bgcolor="black",
             height=max(300, 32 * len(kept) + 120),
-            xaxis=dict(side="top", showgrid=False),
-            yaxis=dict(showgrid=False),
+            xaxis={"side": "top", "showgrid": False},
+            yaxis={"showgrid": False},
         )
     )
 
@@ -279,7 +279,7 @@ def pareto(front: pd.DataFrame, chosen: pd.Series | None = None) -> go.Figure:
             y=[chosen["tpr"]],
             mode="markers",
             name="chosen",
-            marker=dict(symbol="star", size=14),
+            marker={"symbol": "star", "size": 14},
         )
     return fig.update_xaxes(range=(0, 1)).update_yaxes(range=(0, 1))
 
@@ -383,7 +383,7 @@ def tradeoff(df: pd.DataFrame, point: tuple[float, float] | None = None) -> go.F
             y=[point[1]],
             mode="markers",
             name="(b)",
-            marker=dict(symbol="star", size=14),
+            marker={"symbol": "star", "size": 14},
         )
     return fig.update_layout(
         xaxis_title="% builds saved", yaxis_title="% failures caught"
@@ -407,5 +407,5 @@ def confusion(cm: np.ndarray, labels: tuple[str, str] = ("pass", "fail")) -> go.
         x=list(labels),
         y=list(labels),
         text_auto=True,
-        labels=dict(x="predicted", y="actual"),
+        labels={"x": "predicted", "y": "actual"},
     )
