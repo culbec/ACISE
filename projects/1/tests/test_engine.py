@@ -20,7 +20,7 @@ from acise_p1_cigp.gp.engine import (
 from acise_p1_cigp.gp.simplify import motifs, simplify, to_python
 from acise_p1_cigp.metrics.metrics import confusion, mcc
 
-FAST = GPConfig(pop=200, n_gen=50, lambda=0.02)
+FAST = GPConfig(pop=200, n_gen=50, lambda_=0.02)
 
 
 def planted(n=800, seed=0):
@@ -48,6 +48,19 @@ def test_budget_respected(runs, variant):
         assert (r.table["statements"] <= 4).all()
 
 
+@pytest.mark.parametrize("variant", ["so", "mo"])
+def test_archive_has_no_prediction_duplicates(runs, variant):
+    X_fit = planted()[0]
+    for r in runs[variant]:
+        preds = {predict(i, r.pset, X_fit).tobytes() for i in r.hof}
+        assert len(preds) == len(r.hof)
+
+
+def test_mo_minimises_size(runs):
+    for r in runs["mo"]:
+        assert all(i.fitness.values[2] == statements(i) for i in r.hof)
+
+
 def test_same_seed_same_program():
     data = planted()
     cfg = GPConfig(pop=50, n_gen=5)
@@ -61,7 +74,7 @@ def test_score_and_constant_predict():
     pred = predict(const, pset, X)
     assert pred.shape == (3,) and pred.all()
     y = np.array([1, 0, 1])
-    cfg = GPConfig(n_max=4, lambda=0.1)
+    cfg = GPConfig(n_max=4, lambda_=0.1)
     assert score(y, pred, 2, cfg) == (mcc(confusion(y, pred)) - 0.1 * 2 / 4,)
     with pytest.raises(ValueError, match="n_max"):
         score(y, pred, 2, GPConfig())

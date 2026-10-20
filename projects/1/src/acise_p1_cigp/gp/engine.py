@@ -29,7 +29,7 @@ PRIMITIVES = (
 
 if not hasattr(creator, "FitnessSO"):
     creator.create("FitnessSO", base.Fitness, weights=(1.0,))
-    creator.create("FitnessMO", base.Fitness, weights=(1.0, -1.0))
+    creator.create("FitnessMO", base.Fitness, weights=(1.0, -1.0, -1.0))
     creator.create("IndSO", gp.PrimitiveTree, fitness=creator.FitnessSO)  # pyright: ignore[reportAttributeAccessIssue]
     creator.create("IndMO", gp.PrimitiveTree, fitness=creator.FitnessMO)  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -45,7 +45,7 @@ class GPConfig:
     lambda_: float = 0.05
     max_height: int = 8
     init_depth: tuple[int, int] = (1, 4)
-    hof_size: int = 10 # hall of fame size; MO: Pareto front size
+    hof_size: int = 10  # SO hall of fame size; the MO Pareto front is unbounded
     elite: int = 1  # SO only
     patience: int | None = None  # generations without val improvement; None = off
     n_max: int | None = None  # statement budget N; None = number of features
@@ -184,14 +184,15 @@ def score(y, pred, size: int, cfg: GPConfig) -> tuple[float, ...]:
         y: labels, 1/True = failed.
         pred: predictions, True = will fail.
         size (int): statement count of the program.
-        cfg (GPConfig): variant, `lam` and `n_max` (must be set).
+        cfg (GPConfig): variant, `lambda_` and `n_max` (SO only, must be set).
 
     Returns:
-        tuple[float, ...]: SO `(mcc - lam * size / n_max,)`; MO `(tpr, fpr)`.
+        tuple[float, ...]: SO `(mcc - lambda_ * size / n_max,)`; MO `(tpr, fpr, size)`,
+            size minimised so a bigger program with the same rates is dominated.
     """
     c = confusion(y, pred)
     if cfg.variant == "mo":
-        return rates(c)
+        return (*rates(c), size)
     if not cfg.n_max:
         raise ValueError("cfg.n_max must be set to score the SO variant")
     return (mcc(c) - cfg.lambda_ * size / cfg.n_max,)
@@ -239,6 +240,21 @@ def _init(cls, pset, cfg: GPConfig) -> list:
     return pop
 
 
+def _same_predictions(a, b) -> bool:
+    """
+    Duplicate test for the hall of fame and the Pareto front: same predictions on
+    the fit rows, whatever the syntax (`le(c, f)` and `not_(gt(c, f))` are one program).
+
+    Args:
+        a: individual with `key` set by `evolve`.
+        b: individual with `key` set by `evolve`.
+
+    Returns:
+        bool: True when both predict the same on every fit row.
+    """
+    return a.key == b.key
+
+
 def _table(hof, pset, X_val, y_val, cfg: GPConfig) -> pd.DataFrame:
     """
     One row per archive member, for `viz.size_vs_fitness` (SO) and `viz.pareto` (MO).
@@ -260,7 +276,8 @@ def _table(hof, pset, X_val, y_val, cfg: GPConfig) -> pd.DataFrame:
         val = score(y_val, predict(ind, pset, X_val), size, cfg)
         row = {"program": str(ind), "statements": size}
         if cfg.variant == "mo":
-            row |= dict(zip(("fit_tpr", "fit_fpr", "tpr", "fpr"), (*ind.fitness.values, *val)))
+            fit = ind.fitness.values
+            row |= {"fit_tpr": fit[0], "fit_fpr": fit[1], "tpr": val[0], "fpr": val[1]}
         else:
             row |= {"fitness": ind.fitness.values[0], "val_fitness": val[0]}
         rows.append(row)
@@ -306,7 +323,9 @@ def evolve(
     def evaluate(inds):
         for ind in inds:
             if not ind.fitness.valid:
-                ind.fitness.values = score(y_fit, predict(ind, pset, X_fit), statements(ind), cfg)
+                pred = predict(ind, pset, X_fit)
+                ind.key = np.packbits(pred).tobytes()
+                ind.fitness.values = score(y_fit, pred, statements(ind), cfg)
 
     def val_key(ind):
         return _val_key(ind, pset, X_val, y_val, cfg)
@@ -318,7 +337,11 @@ def evolve(
 
     pop = _init(creator.IndMO if mo else creator.IndSO, pset, cfg)  # pyright: ignore[reportAttributeAccessIssue]
     evaluate(pop)
-    hof = tools.ParetoFront() if mo else tools.HallOfFame(cfg.hof_size)
+    hof = (
+        tools.ParetoFront(_same_predictions)
+        if mo
+        else tools.HallOfFame(cfg.hof_size, similar=_same_predictions)
+    )
     hof.update(pop)
     rows: list[dict] = []
     record(0)

@@ -14,7 +14,7 @@ The objective (`score`) and the vectorised evaluation (`predict`) do not depend 
 make_pset(features: list[str]) -> gp.PrimitiveSetTyped
 statements(tree) -> int                                            # primitive nodes; the one counting rule
 predict(tree, pset, X: pd.DataFrame) -> np.ndarray                  # bool per row
-score(y, pred, size: int, cfg: GPConfig) -> tuple[float, ...]       # SO: (mcc - lam * size / N,), MO: (tpr, fpr)
+score(y, pred, size: int, cfg: GPConfig) -> tuple[float, ...]       # SO: (mcc - lambda_ * size / N,), MO: (tpr, fpr, size)
 evolve(X_fit, y_fit, X_val, y_val, cfg: GPConfig, seed: int) -> GPResult
 fit_predict(split, seed: int, cfg: GPConfig) -> Result             # run_cv adapter: partial(fit_predict, cfg=cfg)
 ```
@@ -66,7 +66,9 @@ Defaults are placeholders for the notebook to tune. On a planted target, tournam
 ## Fitness variants
 
 1. **SO** (headline): `score` = `mcc(confusion(y_fit, pred)) - lam * statements / N`, weights `(1.0,)`, `selTournament`, plus `elite` hall-of-fame members carried to the next generation.
-2. **MO**: `score` = `rates(confusion(y_fit, pred))`, weights `(1.0, -1.0)`, mu + lambda with `selNSGA2`, `tools.ParetoFront` as the archive.
+2. **MO**: `score` = `(tpr, fpr, statements)`, weights `(1.0, -1.0, -1.0)`, mu + lambda with `selNSGA2`, `tools.ParetoFront` as the archive. Size is the third objective because without it NSGA-II kept bigger programs with the same rates (first atlasdb run: 7.8 statements on average vs 3.7 for SO at similar MCC).
+
+Duplicates: both archives treat two programs as one when they predict the same on every fit row (`_same_predictions`, on a packed-bits key set during evaluation). Before this, `le(c, f)` and `not_(gt(c, f))` filled the hall of fame with copies of one rule.
 
 `confusion`, `mcc`, `rates` come from `metrics`, so there is no second MCC or TPR.
 

@@ -1,3 +1,4 @@
+import logging
 import warnings
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -9,9 +10,20 @@ from sklearn.impute import SimpleImputer
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import MinMaxScaler
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 from acise_p1_cigp.data.load import Dataset
 from acise_p1_cigp.metrics.metrics import domain, scores
+from acise_p1_cigp.utils.logging.log import get_logger, log
+
+logger = get_logger(__name__)
 
 # Below this many failures a test fold gives unstable recall/MCC.
 MIN_TEST_FAILURES = 10
@@ -140,29 +152,55 @@ def run_cv(
     Score ``fit_predict`` on every fold (and seed). Without ``seeds`` it is called as
     ``fit_predict(split)`` once per fold; with seeds as ``fit_predict(split, seed)``.
 
+    Verbosity follows the package log level: INFO logs each fold transition and
+    shows a progress bar over fold x seed runs; DEBUG adds the scores of each run.
+
     Returns:
         tuple: one row per fold x seed (method, fold, seed, n_test, n_fail, every
             ``scores`` and ``domain`` key), and the payloads keyed by (fold, seed).
     """
     seed_list = list(seeds) if seeds is not None else [None]
+    fold_list = folds(ds, n_splits)
     rows, payloads = [], {}
-    for fold in folds(ds, n_splits):
-        split = prepare(ds, features, fold)
-        y_test = ds.y.iloc[fold.test]
-        for seed in seed_list:
-            out = fit_predict(split) if seed is None else fit_predict(split, seed)
-            res = out if isinstance(out, Result) else Result(out)
-            rows.append(
-                {
+    bar = Progress(
+        TextColumn("{task.description}"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+        console=log,
+        disable=not logger.isEnabledFor(logging.INFO),
+    )
+    with bar:
+        task = bar.add_task(method, total=len(fold_list) * len(seed_list))
+        for fold in fold_list:
+            split = prepare(ds, features, fold)
+            y_test = ds.y.iloc[fold.test]
+            n_fail = int(y_test.sum())
+            name = f"{method} fold {fold.k + 1}/{len(fold_list)}"
+            logger.info(
+                f"{name}: fit {len(fold.fit)}, val {len(fold.val)}, "
+                f"test {len(fold.test)} ({n_fail} failures), {len(seed_list)} run(s)"
+            )
+            bar.update(task, description=name)
+            for seed in seed_list:
+                out = fit_predict(split) if seed is None else fit_predict(split, seed)
+                res = out if isinstance(out, Result) else Result(out)
+                row = {
                     "method": method,
                     "fold": fold.k,
                     "seed": seed,
                     "n_test": len(fold.test),
-                    "n_fail": int(y_test.sum()),
+                    "n_fail": n_fail,
                     **scores(y_test, res.pred),
                     **domain(y_test, res.pred),
                 }
-            )
-            if res.payload is not None:
-                payloads[(fold.k, seed)] = res.payload
+                rows.append(row)
+                logger.debug(
+                    f"{name} seed {seed}: mcc {row['mcc']:.3f}, "
+                    f"recall {row['recall']:.3f}, precision {row['precision']:.3f}"
+                )
+                if res.payload is not None:
+                    payloads[(fold.k, seed)] = res.payload
+                bar.advance(task)
     return pd.DataFrame(rows), payloads

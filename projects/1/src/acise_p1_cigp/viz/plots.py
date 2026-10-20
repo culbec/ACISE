@@ -319,6 +319,30 @@ def feature_freq_performers(freq: pd.Series) -> go.Figure:
     )
 
 
+def learning_curve(df: pd.DataFrame) -> go.Figure:
+    """
+    MCC against the number of fit rows, median over seeds with a min-max band
+    as error bars. A flat curve means more rows of the same project add little.
+
+    Args:
+        df (pd.DataFrame): one row per run; cols `fit_rows`, `split` (val / test), `mcc`.
+
+    Returns:
+        go.Figure: line plot, one line per split.
+    """
+    agg = df.groupby(["split", "fit_rows"])["mcc"].agg(["median", "min", "max"]).reset_index()
+    return px.line(
+        agg,
+        x="fit_rows",
+        y="median",
+        color="split",
+        error_y=agg["max"] - agg["median"],
+        error_y_minus=agg["median"] - agg["min"],
+        markers=True,
+        labels={"median": "mcc (median over seeds)"},
+    )
+
+
 # ==============================
 # Results
 # ==============================
