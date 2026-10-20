@@ -6,7 +6,7 @@ from urllib.parse import unquote, urlparse
 
 import requests
 
-from acise_p1_cigp.utils.logging.log import log
+from acise_p1_cigp.utils.logging.log import get_logger, log
 
 # projects/1/src/acise_p1_cigp/utils/data/download_data.py -> projects/1/data
 DATA_DIR: pathlib.Path = pathlib.Path(__file__).resolve().parents[4] / "data"
@@ -23,9 +23,11 @@ ALLOWED_FILES: frozenset[str] = frozenset(
 
 CHUNK_SIZE: int = 1 << 20
 
+logger = get_logger(__name__)
+
 
 def die(msg: str) -> None:
-    log.print("[bold red]ERR:[/bold red]", msg)
+    logger.error(msg)
     sys.exit(2)
 
 
@@ -49,7 +51,7 @@ def _unzip(zf: zipfile.ZipFile, dest: pathlib.Path) -> list[pathlib.Path]:
     for name in _list_contents(zf):
         target = (dest / name).resolve()
         if not target.is_relative_to(dest):  # zip-slip guard
-            log.print(f"[yellow]Skipping unsafe path:[/yellow] {name}")
+            logger.warning(f"Skipping unsafe path: {name}")
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         with zf.open(name) as src, open(target, "wb") as out:
@@ -77,7 +79,7 @@ def _fetch(session: requests.Session, url: str, out: pathlib.Path) -> None:
             for chunk in resp.iter_content(CHUNK_SIZE):
                 fout.write(chunk)
                 done += len(chunk)
-            log.print(
+            logger.info(
                 f"{out.name}: {done / 1e6:.1f} MB"
                 + (f" / {total / 1e6:.1f} MB" if total else "")
             )
@@ -98,18 +100,17 @@ def download_data(
         try:
             out = DATA_DIR / _filename(url)
             if out.exists() and not force:
-                log.print(f"{out.name} already downloaded, skipping fetch.")
+                logger.info(f"{out.name} already downloaded, skipping fetch.")
             else:
                 _fetch(session, url, out)
 
             if zipfile.is_zipfile(out):
                 with zipfile.ZipFile(out) as zf:
                     files = _unzip(zf, RAW_DIR)
-                log.print(f"Extracted {len(files)} CSV files to {RAW_DIR.as_posix()}")
+                logger.info(f"Extracted {len(files)} CSV files to {RAW_DIR.as_posix()}")
             succ.append(url)
         except Exception:
-            log.print(f"[red]Exception encountered while requesting {url}[/red]")
-            log.print_exception()
+            logger.exception(f"Exception encountered while requesting {url}")
             failed.append(url)
 
     return succ, failed
@@ -146,6 +147,6 @@ def main() -> None:
         die(f"No URLs present in {DATA_URLS_FILE}!")
 
     succ, failed = download_data(data_urls, force=args.force)
-    log.print("Done!", f"Successful: {succ}", f"Failed: {failed}")
+    logger.info(f"Done! Successful: {succ} Failed: {failed}")
 
     sys.exit(1 if failed else 0)

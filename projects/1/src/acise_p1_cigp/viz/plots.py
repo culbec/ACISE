@@ -6,7 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from acise_p1_cigp.utils.logging.log import log
+from acise_p1_cigp.utils.logging.log import get_logger
 
 # projects/1/src/acise_p1_cigp/viz/plots.py -> projects/1/results/figures
 FIG_DIR: pathlib.Path = (
@@ -19,6 +19,8 @@ DIST_PLOT_F: dict[str, Callable] = {
 }
 COLOR_SCALE: str = "Spectral"
 
+logger = get_logger(__name__)
+
 
 def save(fig: go.Figure, name: str, *, png: bool = True) -> go.Figure:
     """Write `<name>.html` (and `<name>.png` via kaleido) to results/figures/."""
@@ -26,7 +28,7 @@ def save(fig: go.Figure, name: str, *, png: bool = True) -> go.Figure:
     fig.write_html(FIG_DIR / f"{name}.html")
     if png:
         fig.write_image(FIG_DIR / f"{name}.png", scale=2)
-    log.print(f"[green]Saved figure:[/green] {FIG_DIR / name}.*")
+    logger.info(f"Saved figure: {FIG_DIR / name}.*")
     return fig
 
 

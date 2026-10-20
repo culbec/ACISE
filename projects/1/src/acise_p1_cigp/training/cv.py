@@ -110,6 +110,24 @@ def prepare(ds: Dataset, features: list[str], fold: Fold) -> Split:
     )
 
 
+def dev_split(ds: Dataset, features: list[str], val_frac: float = 0.2) -> Split:
+    """
+    Fit on the head of the dev segment, validate on its tail. Used for tuning and
+    for the dev-segment runs that feed program (b), so no CV test fold is touched.
+
+    Args:
+        ds (Dataset): preprocessed dataset of one project.
+        features (list[str]): frozen feature list.
+        val_frac (float): share of dev used as validation.
+
+    Returns:
+        Split: `X_test` and `raw_test` are the validation rows.
+    """
+    dev = np.flatnonzero(ds.dev_mask)
+    cut = len(dev) - int(len(dev) * val_frac)
+    return prepare(ds, features, Fold(-1, dev[:cut], dev[cut:], dev[cut:]))
+
+
 def run_cv(
     ds: Dataset,
     features: list[str],

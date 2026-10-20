@@ -77,6 +77,22 @@ class Selection:
         return path
 
 
+def load_features(target: str, project: str, out_dir: pathlib.Path = OUT_DIR) -> list[str]:
+    """
+    Reads the frozen feature list written by `Selection.save`.
+
+    Args:
+        target (str): "T1" or "T2".
+        project (str): project name, or "pooled".
+        out_dir (pathlib.Path): directory holding the JSON files.
+
+    Returns:
+        list[str]: selected features, ordered by relevance; N = its length.
+    """
+    path = out_dir / f"selected_features_{target}_{project}.json"
+    return json.loads(path.read_text())["features"]
+
+
 def _binary(X: pd.DataFrame) -> list[str]:
     """
     Binary columns, decided by value set ({0, 1}) and not by `nunique == 2`, since
