@@ -59,6 +59,9 @@ class Split:
         pd.DataFrame
     )  # unscaled ds.X test rows, all columns (Parrot reads last_label)
     prep: Pipeline  # imputer, then QuantileTransformer: raw units to percentiles
+    # unscaled selected features of fit and val, for programs over raw units (b)
+    raw_fit: pd.DataFrame | None = None
+    raw_val: pd.DataFrame | None = None
 
 
 @dataclass(frozen=True)
@@ -123,6 +126,8 @@ def prepare(ds: Dataset, features: list[str], fold: Fold) -> Split:
         X_test=prep.transform(X.iloc[fold.test]),
         raw_test=ds.X.iloc[fold.test],
         prep=prep,
+        raw_fit=X.iloc[fold.fit],
+        raw_val=X.iloc[fold.val],
     )
 
 
