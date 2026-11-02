@@ -234,6 +234,7 @@ ruvector.db
 
 # Data
 projects/**/data/raw
+projects/2/data/processed
 projects/**/data/*.zip
 projects/**/data/*.zip.part
 

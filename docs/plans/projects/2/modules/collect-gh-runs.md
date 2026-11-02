@@ -1,35 +1,36 @@
-# `collect/gh_runs.py`
+# `collect/gh_runs.py`, `collect/http.py`
 
-Status: todo (step 1). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_collect.py`.
+Status: done (step 1). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_collect.py`.
 
 ## Purpose
 
-Fetch everything the dataset needs from the GitHub REST API and cache it on disk, so collection can stop and resume, and so the build step never touches the network.
+Fetch everything the dataset needs from the GitHub REST API and cache it on disk, so collection can stop and resume, and so the build step never touches the network. One workflow only: pull requests and the PR workflow are out of scope.
 
 ## API
 
 ```python
+# collect/http.py
+token() -> str                                         # $GITHUB_TOKEN, else `gh auth token`
+get(path: str, params: dict | None = None) -> Any      # one call: rate limit, retry, no caching
+get_all(path: str, params: dict | None = None, key: str | None = None) -> list  # every page
+
+# collect/gh_runs.py
 class Target(NamedTuple):
-    repo: str                 # "n8n-io/n8n"
-    workflow_id: int          # 33323319, CI: Master
-    branch: str               # "master"
-    pr_workflow_id: int | None  # 33322401, for pre-merge PR CI counts; None skips them
+    repo: str          # "n8n-io/n8n"
+    workflow_id: int   # 33323319, CI: Master
+    branch: str        # "master"
 
 N8N_MASTER: Target
 
-token() -> str                                   # $GITHUB_TOKEN, else `gh auth token`
-get(path: str, params: dict | None = None) -> dict  # one call: rate limit, retry, no caching
-
-fetch_runs(t: Target, since: date, until: date) -> list[pathlib.Path]   # one JSON per window
-fetch_first_attempts(t: Target) -> int          # for cached runs with run_attempt > 1
-fetch_failed_jobs(t: Target) -> int             # jobs of runs whose first attempt failed
-fetch_pulls(t: Target) -> int                   # /commits/{sha}/pulls per head_sha
-fetch_pr_runs(t: Target) -> int                 # PR CI runs of each merged PR
-collect(t: Target, since: date | None, until: date | None) -> pathlib.Path  # all of the above, writes the manifest
-main()                                          # CLI `collect-runs`
+raw_dir(t) -> pathlib.Path
+cached_runs(t) -> list[dict]                            # every cached run, oldest first
+first_attempt(t, run) -> dict | None                   # the run, or its cached attempts/1
+fetch_details(t, runs) -> int                          # first attempts + failed jobs of `runs`
+collect(t, since: date | None, until: date | None) -> pathlib.Path  # all of it, writes the manifest
+main()                                                 # CLI `collect-runs`
 ```
 
-CLI: `collect-runs [--repo n8n-io/n8n --workflow 33323319 --branch master --pr-workflow 33322401] [--since YYYY-MM-DD] [--until YYYY-MM-DD]`.
+CLI: `collect-runs [--repo n8n-io/n8n --workflow 33323319 --branch master] [--since YYYY-MM-DD] [--until YYYY-MM-DD]`.
 
 ## Cache layout
 
@@ -37,31 +38,29 @@ CLI: `collect-runs [--repo n8n-io/n8n --workflow 33323319 --branch master --pr-w
 
 | Dir | One file per | Content |
 |---|---|---|
-| `runs/` | date window, `<since>_<until>.json` | runs list, all pages merged |
+| `runs/` | date window, `<since>_<until>.json` | runs list, all pages merged; `<since>_<until>.split` marks a window that was halved |
 | `attempts/` | run id | `/actions/runs/{id}/attempts/1` |
-| `jobs/` | run id | `/actions/runs/{id}/jobs`, all pages |
-| `pulls/` | head SHA | `/commits/{sha}/pulls` (may be empty: direct pushes) |
-| `pr_runs/` | PR number | PR workflow runs filtered as below |
+| `jobs/` | run id | `/actions/runs/{id}/attempts/1/jobs`, all pages |
 
-A file that exists is never fetched again. Writes go to `*.tmp` and are renamed, so an interrupted run never leaves a half file. The manifest goes to `projects/2/results/collection/manifest_<owner>__<name>.json`: target, windows with their run counts, `collected_at` (this is date `C`), and the API call count.
+A file that exists is never fetched again. Writes go to `*.tmp` and are renamed, so an interrupted run never leaves a half file. The manifest goes to `projects/2/results/collection/manifest_<owner>__<name>.json`: target, windows with their run counts, `collected_at` (date `C`), and the API call count.
 
 ## Design decisions
 
-- **Date windows.** Start with calendar months. The runs endpoint returns at most 1000 results per query, so if a window's `total_count` is ≥ 1000 it is split in half and both halves are fetched (recursively). The test checks the split on a fake `get`.
-- **Default range.** `since` defaults to the workflow's earliest run (found by an ascending probe on yearly windows); `until` defaults to now (UTC). `--since C` is how `retest` gets new runs.
-- **Rate limits.** Read `X-RateLimit-Remaining` / `X-RateLimit-Reset` on every response; at 0, sleep until reset with a rich countdown. Retry 5xx and secondary-limit 403/429 with exponential backoff (max 5 tries, honouring `Retry-After`). Anything else raises.
-- **Token.** Read once per process, kept in memory, never logged or written. Sent as `Authorization: Bearer`.
-- **First attempt.** Only runs with `run_attempt > 1` need `attempts/1`; others are their own first attempt.
-- **Jobs only for failed runs.** The build needs the failed-job count of earlier failed runs, and the EDA the job names. Successful runs have 0 failed jobs by definition.
-- **PR CI runs.** For each merged PR: PR workflow runs with `branch=<pr.head.ref>`, kept only if `head_repository.full_name == pr.head.repo.full_name` (forks reuse branch names like `master`) and `created_at < pr.merged_at`. The window `[pr.created_at, pr.merged_at]` goes in `created=` so the 1000 cap is never hit for one PR.
-- **No fields are dropped at fetch time.** Raw JSON is kept whole; `data/build.py` picks fields. A later feature then needs no re-collection.
-- `requests.Session` reused for keep-alive; timeout 30 s per call.
+- **Date windows.** Calendar months. A one-result probe reads `total_count`; at ≥ 1000 the window is halved (recursively) and a `.split` marker is written, so a resumed collection re-enters the halves without probing again.
+- **Processing per window.** As soon as a window is on disk, its re-run runs get `attempts/1` and its failed first attempts get their jobs. Details follow the runs, with no separate pass over the cache.
+- **Default range.** `since` defaults to the workflow's `created_at` (one call to `/actions/workflows/{id}`); `until` defaults to today (UTC). `--since C` is how `retest` gets new runs.
+- **Rate limits.** `X-RateLimit-Remaining: 0` sleeps until `X-RateLimit-Reset`. 5xx and secondary limits (403/429) are retried with exponential backoff (max 5 tries, honouring `Retry-After`). Any other error raises.
+- **Token.** Read once per process, kept in memory, never logged or written. Sent as `Authorization: Bearer`, with `X-GitHub-Api-Version: API_VERSION`.
+- **First attempt.** Only runs with `run_attempt > 1` need `attempts/1`; the others are their own first attempt.
+- **Jobs only for failed first attempts.** Successful runs have 0 failed jobs by definition.
+- **No fields are dropped at fetch time.** Raw JSON is kept whole; `data/build.py` picks fields.
 
 ## Verification
 
-- Window split: a fake `get` returns `total_count` 2400 for a month and 600 per half; `fetch_runs` writes the two halves, not the month.
-- Resume: a second `collect` with the same arguments makes zero calls (fake `get` counts them).
-- Atomic write: a fake `get` raising mid-window leaves no `.json` for that window.
-- PR filter: recorded fixture with a fork PR on branch `master` and a run after `merged_at`; both are excluded.
-- Rate limit: a response with `Remaining: 0` and `Reset` 2 s ahead makes `get` sleep about 2 s (sleep is patched and its argument checked).
+- Window split: a fake `get` returns `total_count` 2400 for a month and 600 per half; only the halves are written, and a second call makes no request.
+- Resume: a second `collect` with the same arguments makes zero calls.
+- First-attempt label: a run re-run to success keeps its failed `attempts/1` and gets its jobs.
+- Atomic write: a fake `get` raising mid-window leaves no `.json`.
+- Month windows across a year boundary.
+- Rate limit: `Remaining: 0` with `Reset` 2 s ahead makes `get` sleep about 3 s (2 s + 1 s margin).
 - No live network in tests.

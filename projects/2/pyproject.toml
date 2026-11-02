@@ -5,7 +5,6 @@ description = "ACISE Project 2: CI Build Failure Prediction using DT"
 authors = [
     { name = "culbec", email = "profir.alexx@gmail.com" }
 ]
-readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "ipykernel>=7.4.0",
@@ -22,6 +21,10 @@ dependencies = [
     "scipy>=1.18.1",
     "skops>=0.16.0",
 ]
+
+[project.scripts]
+collect-runs = "acise_p2_cidt.collect.gh_runs:main"
+build-dataset = "acise_p2_cidt.data.build:main"
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]

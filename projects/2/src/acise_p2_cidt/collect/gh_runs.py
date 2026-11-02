@@ -1,0 +1,221 @@
+import argparse
+import json
+import os
+import pathlib
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, NamedTuple
+
+from rich.progress import track
+
+from acise_p2_cidt.collect import http
+from acise_p2_cidt.utils.logging.log import get_logger, log
+
+# The runs endpoint returns at most 1000 results per query; a window at or above
+# this count is split, otherwise its tail would be cut.
+MAX_WINDOW_RUNS: int = 1000
+
+# projects/2/src/acise_p2_cidt/collect/gh_runs.py -> projects/2/data/raw
+RAW_ROOT = pathlib.Path(__file__).resolve().parents[3] / "data" / "raw"
+# projects/2/src/acise_p2_cidt/collect/gh_runs.py -> projects/2/results/collection
+RESULTS_DIR = pathlib.Path(__file__).resolve().parents[3] / "results" / "collection"
+
+logger = get_logger(__name__)
+
+
+class Target(NamedTuple):
+    repo: str  # "owner/name"
+    workflow_id: int  # the push workflow on the branch
+    branch: str
+
+
+N8N_MASTER = Target("n8n-io/n8n", 33323319, "master")
+
+
+# =============================================================================
+# Cache
+# =============================================================================
+
+
+def raw_dir(t: Target) -> pathlib.Path:
+    """`data/raw/<owner>__<name>`: the on-disk cache of one target."""
+    return RAW_ROOT / t.repo.replace("/", "__")
+
+
+def read_json(path: pathlib.Path) -> Any:
+    return json.loads(path.read_text())
+
+
+def _write_json(path: pathlib.Path, obj: Any) -> None:
+    # Write then rename: an interrupted run never leaves a half file.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(obj))
+    os.replace(tmp, path)
+
+
+def cached_runs(t: Target) -> list[dict]:
+    """
+    Every cached run of the target, deduplicated by id, oldest first.
+
+    Args:
+        t (Target): collection target.
+
+    Returns:
+        list[dict]: raw run objects as the API returned them (latest attempt).
+    """
+    runs = {
+        r["id"]: r
+        for p in sorted((raw_dir(t) / "runs").glob("*.json"))
+        for r in read_json(p)["workflow_runs"]
+    }
+    return sorted(runs.values(), key=lambda r: (r["created_at"], r["id"]))
+
+
+def first_attempt(t: Target, run: dict) -> dict | None:
+    """
+    The run's first attempt: the run itself if it was never re-run, else the cached
+    `attempts/1`. None when that file is not collected yet.
+    """
+    if run.get("run_attempt", 1) <= 1:
+        return run
+    p = raw_dir(t) / "attempts" / f"{run['id']}.json"
+    return read_json(p) if p.exists() else None
+
+
+# =============================================================================
+# Fetching
+# =============================================================================
+
+
+def _months(since: date, until: date) -> list[tuple[date, date]]:
+    out, a = [], since
+    while a <= until:
+        nxt = date(a.year + a.month // 12, a.month % 12 + 1, 1)
+        out.append((a, min(nxt - timedelta(days=1), until)))
+        a = nxt
+    return out
+
+
+def _fetch_window(t: Target, a: date, b: date) -> list[pathlib.Path]:
+    """
+    Runs created in `[a, b]`, halved until each half is under `MAX_WINDOW_RUNS`.
+    A `.split` marker records a halving, so a resumed collection makes no calls for
+    windows already on disk.
+    """
+    out = raw_dir(t) / "runs" / f"{a}_{b}.json"
+    if out.exists():
+        return [out]
+    split = out.with_suffix(".split")
+    if not split.exists():
+        path = f"/repos/{t.repo}/actions/workflows/{t.workflow_id}/runs"
+        params = {"branch": t.branch, "event": "push", "created": f"{a}..{b}"}
+        total = http.get(path, {**params, "per_page": 1})["total_count"]
+        if total < MAX_WINDOW_RUNS:
+            runs = http.get_all(path, params, key="workflow_runs")
+            _write_json(out, {"total_count": total, "workflow_runs": runs})
+            logger.info("window %s..%s: %d runs", a, b, len(runs))
+            return [out]
+        if a == b:
+            raise RuntimeError(f"{total} runs on {a}: one day is above the API cap")
+        split.parent.mkdir(parents=True, exist_ok=True)
+        split.touch()
+    mid = a + (b - a) // 2
+    return _fetch_window(t, a, mid) + _fetch_window(t, mid + timedelta(days=1), b)
+
+
+def fetch_details(t: Target, runs: list[dict], label: str = "details") -> int:
+    """
+    First attempts of re-run runs, then the first-attempt jobs of runs whose first
+    attempt failed. The label is the first-attempt conclusion; successful runs have
+    no failed jobs, so they cost no call.
+
+    Args:
+        t (Target): collection target.
+        runs (list[dict]): raw runs, e.g. one window.
+        label (str): progress bar text.
+
+    Returns:
+        int: number of files fetched.
+    """
+    d, n = raw_dir(t), 0
+    for r in track(runs, description=label, console=log, transient=True):
+        if r["status"] != "completed":
+            continue
+        run_url = f"/repos/{t.repo}/actions/runs/{r['id']}/attempts/1"
+        attempt = d / "attempts" / f"{r['id']}.json"
+        if r["run_attempt"] > 1 and not attempt.exists():
+            _write_json(attempt, http.get(run_url))
+            n += 1
+        first = first_attempt(t, r)
+        jobs = d / "jobs" / f"{r['id']}.json"
+        if first and first["conclusion"] == "failure" and not jobs.exists():
+            _write_json(jobs, {"jobs": http.get_all(f"{run_url}/jobs", key="jobs")})
+            n += 1
+    return n
+
+
+def collect(
+    t: Target, since: date | None = None, until: date | None = None
+) -> pathlib.Path:
+    """
+    Fetches runs month by month; each window's details are fetched as soon as the
+    window is on disk. Everything cached is skipped, so an interrupted collection
+    resumes where it stopped.
+
+    Args:
+        t (Target): collection target.
+        since (date | None): first day; None = the workflow's creation day.
+        until (date | None): last day; None = today (UTC).
+
+    Returns:
+        pathlib.Path: the manifest, which records the collection date C.
+    """
+    calls0 = http.calls
+    if since is None:
+        workflow = http.get(f"/repos/{t.repo}/actions/workflows/{t.workflow_id}")
+        since = datetime.fromisoformat(workflow["created_at"]).date()
+    until = until or datetime.now(UTC).date()
+
+    windows = []
+    for a, b in _months(since, until):
+        for p in _fetch_window(t, a, b):
+            fetch_details(t, read_json(p)["workflow_runs"], label=p.stem)
+            windows.append(p)
+
+    manifest = {
+        "target": t._asdict(),
+        "since": str(since),
+        "until": str(until),
+        "collected_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "windows": {p.stem: read_json(p)["total_count"] for p in windows},
+        "n_runs": len(cached_runs(t)),
+        "api_calls": http.calls - calls0,
+        "queries": [
+            (
+                f"GET /repos/{t.repo}/actions/workflows/{t.workflow_id}/runs"
+                f"?branch={t.branch}&event=push&created=<window>"
+            ),
+            f"GET /repos/{t.repo}/actions/runs/<id>/attempts/1",
+            f"GET /repos/{t.repo}/actions/runs/<id>/attempts/1/jobs",
+        ],
+    }
+    out = RESULTS_DIR / f"manifest_{t.repo.replace('/', '__')}.json"
+    _write_json(out, manifest)
+    log.print(f"{manifest['n_runs']} runs cached, {manifest['api_calls']} API calls")
+    return out
+
+
+def main() -> None:
+    p = argparse.ArgumentParser(description="Collect GitHub Actions runs.")
+    p.add_argument("--repo", default=N8N_MASTER.repo)
+    p.add_argument("--workflow", type=int, default=N8N_MASTER.workflow_id)
+    p.add_argument("--branch", default=N8N_MASTER.branch)
+    p.add_argument("--since", type=date.fromisoformat)
+    p.add_argument("--until", type=date.fromisoformat)
+    a = p.parse_args()
+    t = Target(a.repo, a.workflow, a.branch)
+    log.print(f"manifest: {collect(t, a.since, a.until)}")
+
+
+if __name__ == "__main__":
+    main()

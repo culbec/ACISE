@@ -73,10 +73,9 @@ Dataset: **`CI: Master` only**, all `push` runs available at collection time. PR
 2. **First-attempt label.** The runs endpoint returns the latest attempt. For runs with `run_attempt > 1`, fetch `/actions/runs/{id}/attempts/1`. The label is the **first-attempt** conclusion, which is what the developer saw first. Record `was_rerun` and `flaky = first failed and a later attempt passed` as diagnostics, never as features.
 3. **Jobs of failed runs.** `/actions/runs/{id}/jobs` only for failed runs (~15%). Store the failed job names and the total job count. These feed the *previous run's* failed-job features. A mapping from job names to categories (`build`, `lint`, `unit`, `integration`, `other`) is used **only in the EDA**, never as a feature, because job names are specific to each repository.
 4. **Diffs.** `git clone --single-branch --branch master https://github.com/n8n-io/n8n data/raw/n8n.git` once (a full clone: `--numstat` needs file contents, and a blobless clone would fetch them one by one). One `git log --numstat` pass gives files, additions, deletions, parents, and message for every commit. `git rev-list` and `git diff` between the current SHA and the previous (and last green) run's SHA give the since-previous-run features; `git log -- <files>` gives file history. No API calls.
-5. **Pull requests.** `GET /repos/n8n-io/n8n/commits/{sha}/pulls` per run gives the merged PR (author association, open time, commits, reviews, comments). The PR's own CI runs come from the PR workflow's runs filtered by the PR head branch, counted only before the merge. Cached per SHA on disk.
-6. **Build table.** One chronological pass over the runs computes history features from **earlier rows only**. Writes `data/processed/n8n_master.csv` plus `schema.json` (order column, label column, positive label, previous-label column, nominal columns, columns to drop).
+5. **Build table.** One chronological pass over the runs computes history features from **earlier rows only**. Writes `data/processed/n8n_master.csv` plus `schema.json` (order column, label column, positive label, previous-label column, nominal columns, columns to drop).
 
-API budget: ~50 calls for runs, ~10 for attempts, ~700 for jobs, ~4k for pull requests, plus PR CI lookups. The limit is 5000 per hour, so collection takes about 1–2 hours and must survive a restart (every response is cached on disk). The token comes from `gh auth token` at runtime and is never written to disk.
+API budget (re-measured 2026-11-02: ~10.2k master runs since 2025-09, ~40% failed first attempts): ~150 calls for runs, a few hundred for attempts, ~4k for jobs. The limit is 5000 per hour, so collection takes about 1 hour and must survive a restart (every response is cached on disk). The token comes from `gh auth token` at runtime and is never written to disk.
 
 ### Labels and filtering
 
@@ -90,15 +89,14 @@ Windows: **time** windows `{1,3,6,12,24}h` plus `7d`, and **count** windows `{5,
 
 | Group | Source | Features |
 |---|---|---|
-| Run | runs API | `queue_delay` (`run_started_at - created_at`), `merge_to_ci_delay` (`created_at - head_commit.timestamp`), `author_is_merger`, `ci_load_{1,3,6,12,24}h` (master runs created in the window), `concurrent_runs` (earlier runs still in progress at `created_at`), `secs_since_prev_run` |
+| Run | runs API | `queue_delay` (`run_started_at - created_at`), `merge_to_ci_delay` (`created_at - head_commit.timestamp`), `ci_load_{1,3,6,12,24}h` (master runs created in the window), `concurrent_runs` (earlier runs still in progress at `created_at`), `secs_since_prev_run` |
 | CI history | earlier runs | `prev_failed` (Parrot input), `fail_streak`, `runs_since_last_fail`, `secs_since_last_fail`, `fail_rate_{1,3,6,12,24h,7d}`, `fail_rate_last_{5,10,20,50}`, `flaky_rate_{24h,7d}`, `prev_failed_jobs`, `prev_duration`, `prev_queue_delay` |
-| Author | earlier runs, git, commits API | `author_type` (`author.type` User/Bot combined with the PR's `author_association`), `author_prior_runs`, `author_prior_fail_rate`, `author_prior_commits`, `author_file_familiarity` (share of touched files the author changed before). Logins are **hashed** and never used as features. |
+| Author | earlier runs, git | `author_is_bot` (`[bot]` in the head commit's author name or e-mail), `author_prior_runs`, `author_prior_fail_rate`, `author_prior_commits`, `author_file_familiarity` (share of touched files the author changed before). Logins are **hashed** and never used as features. |
 | Change since previous run | git | `commits_since_prev_run` (`git rev-list --count <prev_sha>..<head_sha>`), churn and file counts since the previous run and since the last **green** run (`git diff --numstat`) |
 | Change size and type | git | `files_changed`, `additions`, `deletions`, `churn`, `src_churn`, `test_churn`, `test_file_ratio`, `src_files`, `test_files`, `config_files` (includes lockfiles and manifests), `doc_files`, `ci_files` (`.github/workflows/**`), `n_dirs_touched`, `dir_entropy` |
 | Commit | git | `n_parents` (merge commit), `is_revert` (message written by `git revert`), `reverted_sha_failed` (the reverted commit's run failed) |
 | File history | git, earlier runs | `file_age_mean`, `file_prior_changes`, `file_distinct_authors`, `secs_since_files_last_changed`, `file_fail_prob_{max,mean}` (failure rate of earlier runs that touched the same files), `overlap_with_last_failed_run` |
 | Workflow and release | git | `workflow_changed`, `days_since_workflow_change`, `days_since_last_tag` |
-| Pull request | `GET /commits/{sha}/pulls` | `pr_open_hours`, `pr_commits`, `pr_review_count`, `pr_comment_count`, `pr_ci_failed_runs` (failed PR CI runs before the merge; these happened before the master push, so they are allowed as input even though PR runs are not in the dataset, D1) |
 
 **Not features.** `created_at` is the order column: it sorts the runs for the time-split CV and is dropped from `X`, like `build_nums` in project 1. `hour` and `weekday` are left out, and so is the absolute date, because a split on the date only learns which period a run belongs to. Commit-message conventions (`commit_type`, `is_breaking`), `msg_len`, PR label names, and job-name categories are left out too, because they depend on each repository's habits.
 
@@ -212,12 +210,12 @@ Porting means re-running collection and build with new parameters (repository, w
 | Workflow definition changed over time (jobs added or renamed) | Use the workflow file's commit history to mark major changes. Add `days_since_workflow_change` if the drift plot shows breaks. |
 | Too few failures in T2 | Check counts after collection. Fall back to T1 as the main target if T2 has fewer than ~300 failures. |
 | API caps hide older runs | Date windows of one month or less. Log the per-window count and assert it is below 1000. |
-| History starts only in 2025 for this workflow id | Confirm the earliest run during collection. ~4k runs are still enough for a tree. |
+| History starts only in 2025-09 for this workflow id | Collection starts at the workflow's `created_at`; ~10k runs are enough for a tree. |
 | skops refuses to load the custom tree class | Pass our types in `trusted=`. Keep the model free of lambdas and open handles. A test round-trips the model and checks that the predictions are identical. |
 
 ## Decisions
 
-- **D1 (decided).** `CI: Master` runs only. No PR runs.
+- **D1 (decided).** `CI: Master` runs only. No PR runs, and no pull-request data (PR metadata or PR CI runs) as features: one workflow keeps collection simple and cheap.
 - **D2 (decided).** Copy the project 1 utilities into `projects/2` and generalise them there. Keep both copies separate until a shared library is decided on.
 - **D3 (open).** Random forest extension. Decide after the CART tree is built and validated.
 - **D4 (decided).** Develop on all data available at collection date `C`. Save the final model with skops. Before hand-off, re-test the saved model on runs created after `C`. Porting to another repository is optional future work.

@@ -10,10 +10,10 @@ Dependencies: `numpy`, `pandas`, `scipy`, `plotly`, `kaleido`, `requests`, `rich
 | # | Module | Spec | Status | Responsibility |
 |---|---|---|---|---|
 | 0 | `utils/logging/log.py`, `viz/plots.py`, `stats/tests.py`, `metrics/metrics.py`, `analysis/features.py`, `training/cv.py` | [p1-ports](modules/p1-ports.md) | done | Copied from project 1 and generalised (D2: separate copies, no imports from `acise_p1_cigp`). |
-| 1 | `collect/gh_runs.py` | [collect-gh-runs](modules/collect-gh-runs.md) | todo | GitHub API collection: runs per date window, first attempts, jobs of failed runs, merged PRs and their pre-merge PR CI runs. Resumable on-disk cache. CLI `collect-runs`. |
-| 2 | `collect/git_changes.py` | [collect-git-changes](modules/collect-git-changes.md) | todo | Local clone, one-pass `git log` table, diffs between run SHAs, generic file classifier. No API calls. |
-| 3 | `data/build.py` | [data-build](modules/data-build.md) | todo | Joins API and git data. One chronological pass computes all features under the completed-before rule. Writes `<repo>.csv` and `schema.json`. CLI `build-dataset`. |
-| 4 | `data/load.py` | [data-load](modules/data-load.md) | todo | Loads a built table into the project 1 `Dataset` shape: T1/T2, dev cut, drop non-features. |
+| 1 | `collect/gh_runs.py`, `collect/http.py` | [collect-gh-runs](modules/collect-gh-runs.md) | done | GitHub API collection of one workflow: runs per date window, first attempts, jobs of failed first attempts. Resumable on-disk cache. CLI `collect-runs`. |
+| 2 | `collect/git_changes.py` | [collect-git-changes](modules/collect-git-changes.md) | done | Local clone, one-pass `git log` table, diffs between run SHAs, generic file classifier. No API calls. |
+| 3 | `data/build.py`, `data/history.py` | [data-build](modules/data-build.md) | done | Joins API and git data. One chronological pass computes all features under the completed-before rule. Writes `<repo>.csv` and `schema.json`. CLI `build-dataset`. |
+| 4 | `data/load.py` | [data-load](modules/data-load.md) | done | Loads a built table into the project 1 `Dataset` shape: T1/T2, dev cut, drop non-features. |
 | 5 | `tree/cart.py` | [tree-cart](modules/tree-cart.md) | todo | From-scratch CART following Breiman et al. (1984). |
 | 6 | `tree/tune.py` | [tree-tune](modules/tree-tune.md) | todo | Grid search, pruning-alpha and threshold choice on validation; `fit_predict` for `training/cv.py`. |
 | 7 | `tree/forest.py` | — | open (D3) | Bagging plus random feature subsets over `tree/cart.py`. No spec until D3 is decided. |
@@ -45,6 +45,8 @@ Taken from the project 1 modules; new code must read as if written by the same a
 - Module order: imports → module constants → `logger = get_logger(__name__)` → data classes → private helpers → public functions → `main()` for CLIs.
 - Long modules are divided by comment banners (`# =============================`) between groups of related functions.
 - Files stay under 500 lines.
+- **Formatting and lint are required.** `uv run ruff format src tests` and `uv run ruff check src tests` must both pass with no errors before any module is handed over. Do not leave `noqa` suppressions where a small rewrite would fix the finding.
+- Inline a helper used in only one place unless it has its own test or a clear name that the call site needs.
 
 **Naming and constants**
 - Constants are `UPPER_CASE` with a type annotation, and a comment saying *why* the value is what it is (`MIN_TEST_FAILURES = 10  # below this a test fold gives unstable recall/MCC`).
@@ -59,7 +61,7 @@ Taken from the project 1 modules; new code must read as if written by the same a
 - Google style, opened on the line after `"""`: one summary sentence, an optional paragraph on the reasoning, then `Args:` with `name (type): meaning` and `Returns:` with `type: meaning`. Trivial helpers get a one-line docstring or none.
 - Comments explain decisions and pitfalls, not mechanics (`# keep_empty_features: an all-NaN column on fit must not shift the columns.`).
 - Type-checker suppressions carry the reason: `# pyright: ignore[reportArgumentType]` after a comment saying why.
-- Deliberate shortcuts with a known limit get a `ponytail:` comment naming the limit and the upgrade path.
+- No `ponytail:` or other tool-specific markers, and no comments that restate the code. Keep a comment only when it records a decision or a pitfall.
 
 **Errors, logging, warnings**
 - Invalid input raises `ValueError` with the received value: `raise ValueError(f"target must be 'T1' or 'T2', got {target!r}")`.

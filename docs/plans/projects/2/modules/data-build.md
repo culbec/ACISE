@@ -18,8 +18,6 @@ main()                                           # CLI `build-dataset [--repo ..
 runs_frame(raw_dir) -> pd.DataFrame          # one row per run, first-attempt label and times
 history_features(runs) -> pd.DataFrame       # CI history, load, author-run features
 git_features(runs, log, repo_dir) -> pd.DataFrame
-pr_features(runs, pulls, pr_runs) -> pd.DataFrame
-author_type(runs, pulls) -> pd.Series
 hash_id(value: str, salt: bytes) -> str
 ```
 
@@ -29,7 +27,7 @@ hash_id(value: str, salt: bytes) -> str
 - `created_at`: order column (dropped from `X`).
 - `failed`: label, 1 = first attempt failed.
 - `prev_failed`: the Parrot input, also a feature; T2 filters on it.
-- All features in the plan's features table. `author_type` is one-hot encoded (`author_type_bot`, `author_type_member`, `author_type_contributor`, `author_type_first_time`).
+- All features in the plan's features table. No nominal columns: `author_is_bot` is 0/1.
 - Diagnostics, never features: `was_rerun`, `flaky`, `conclusion_latest`, `failed_job_names`.
 
 `schema.json`: `repo`, `workflow_id`, `branch`, `collected_at` (C), `n_runs`, `n_dropped` per reason, `order_col`, `id_cols`, `label_col`, `prev_label_col`, `nominal` (empty after one-hot), `diagnostic_cols`, `feature_cols`.
@@ -44,10 +42,9 @@ hash_id(value: str, salt: bytes) -> str
 - **File failure probability.** For each touched file: known runs whose change touched it, failed / total; `max` and `mean` over the touched files. Files never seen give NaN.
 - **Revert link.** `is_revert` when the subject starts with `Revert "` and the body has `This reverts commit <sha>`; `reverted_sha_failed` is the known outcome of the run whose `head_sha` is that SHA (NaN if unknown).
 - **Author identity.** Git author e-mail and API login are hashed with a salted SHA-256 (`hash_id`). The salt is generated once into `data/raw/<repo>/salt.bin` and never leaves `data/raw/`. Raw logins and e-mails are never written to `data/processed/`.
-- **`author_type`.** `bot` if the API `author.type == "Bot"` or the login ends in `[bot]`; else from the PR's `author_association`: OWNER/MEMBER/COLLABORATOR → `member`, CONTRIBUTOR → `contributor`, FIRST_TIME_CONTRIBUTOR/FIRST_TIMER/NONE → `first_time`; no PR → `member` (a direct push to master needs write access).
-- **PR features.** From the PR returned for `head_sha` (the merged one if several). `pr_ci_failed_runs` counts PR CI runs whose first attempt failed. No PR → NaN for every `pr_*`.
+- **`author_is_bot`.** 1 when the head commit's author name or e-mail contains `[bot]`.
 - **Workflow and release.** `workflow_changed`: the run's change touches the workflow file (`ci_files` filtered to this workflow's path, from the run JSON's `path`). `days_since_workflow_change` and `days_since_last_tag` from `commit_log` and `tags` restricted to `commit_time < created_at_i`.
-- `ponytail:` the sweep is pure Python over ~4k rows (well under a second per feature group). Vectorise only if a repository with >100k runs is ported.
+- The sweep is pure Python over ~10k rows (seconds). History and git stages live in `data/history.py` to keep both files under 500 lines.
 
 ## Verification
 
@@ -56,4 +53,3 @@ hash_id(value: str, salt: bytes) -> str
 - First-attempt label: a run re-run to success keeps `failed = 1`, `flaky = 1`.
 - Dropped conclusions are counted in the schema.
 - No raw login or e-mail appears anywhere in the output frame (string search over all cells).
-- `author_type` mapping table, parametrised.
