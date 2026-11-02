@@ -175,7 +175,7 @@ Project 1 is finished and stays frozen. Its utilities are **copied into the proj
 | `viz/plots.py` | almost as is | output dir from package root; label names as parameters |
 | `analysis/features.py` | as is | `NOMINAL` taken from `schema.json`; `Dataset` import path |
 | `metrics/metrics.py` | as is | `parrot()` reads the previous-label column from the schema, not from project 1 constants |
-| `training/cv.py` | mostly | make `prep` pluggable (impute only for trees); keep folds and the dev split |
+| `training/cv.py` | mostly | median imputation only (no scaling for trees), no GP seeds; keep folds and the dev split |
 | `stats/tests.py` | as is | none |
 | `utils/logging/log.py` | as is | logger root name |
 | `data/load.py` | rewrite | schema-driven loader; same `Dataset` dataclass and T1/T2 logic |

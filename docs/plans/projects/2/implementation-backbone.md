@@ -9,7 +9,7 @@ Dependencies: `numpy`, `pandas`, `scipy`, `plotly`, `kaleido`, `requests`, `rich
 
 | # | Module | Spec | Status | Responsibility |
 |---|---|---|---|---|
-| 0 | `utils/logging/log.py`, `viz/plots.py`, `stats/tests.py`, `metrics/metrics.py`, `analysis/features.py`, `training/cv.py` | [p1-ports](modules/p1-ports.md) | todo | Copied from project 1 and generalised (D2: separate copies, no imports from `acise_p1_cigp`). |
+| 0 | `utils/logging/log.py`, `viz/plots.py`, `stats/tests.py`, `metrics/metrics.py`, `analysis/features.py`, `training/cv.py` | [p1-ports](modules/p1-ports.md) | done | Copied from project 1 and generalised (D2: separate copies, no imports from `acise_p1_cigp`). |
 | 1 | `collect/gh_runs.py` | [collect-gh-runs](modules/collect-gh-runs.md) | todo | GitHub API collection: runs per date window, first attempts, jobs of failed runs, merged PRs and their pre-merge PR CI runs. Resumable on-disk cache. CLI `collect-runs`. |
 | 2 | `collect/git_changes.py` | [collect-git-changes](modules/collect-git-changes.md) | todo | Local clone, one-pass `git log` table, diffs between run SHAs, generic file classifier. No API calls. |
 | 3 | `data/build.py` | [data-build](modules/data-build.md) | todo | Joins API and git data. One chronological pass computes all features under the completed-before rule. Writes `<repo>.csv` and `schema.json`. CLI `build-dataset`. |
