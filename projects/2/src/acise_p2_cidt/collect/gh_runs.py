@@ -2,10 +2,11 @@ import argparse
 import json
 import os
 import pathlib
+from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, NamedTuple
 
-from rich.progress import track
+from rich.progress import MofNCompleteColumn, Progress
 
 from acise_p2_cidt.collect import http
 from acise_p2_cidt.utils.logging.log import get_logger, log
@@ -123,7 +124,7 @@ def _fetch_window(t: Target, a: date, b: date) -> list[pathlib.Path]:
     return _fetch_window(t, a, mid) + _fetch_window(t, mid + timedelta(days=1), b)
 
 
-def fetch_details(t: Target, runs: list[dict], label: str = "details") -> int:
+def fetch_details(t: Target, runs: Iterable[dict]) -> int:
     """
     First attempts of re-run runs, then the first-attempt jobs of runs whose first
     attempt failed. The label is the first-attempt conclusion; successful runs have
@@ -131,14 +132,13 @@ def fetch_details(t: Target, runs: list[dict], label: str = "details") -> int:
 
     Args:
         t (Target): collection target.
-        runs (list[dict]): raw runs, e.g. one window.
-        label (str): progress bar text.
+        runs (Iterable[dict]): raw runs, e.g. one window (or a progress track of it).
 
     Returns:
         int: number of files fetched.
     """
     d, n = raw_dir(t), 0
-    for r in track(runs, description=label, console=log, transient=True):
+    for r in runs:
         if r["status"] != "completed":
             continue
         run_url = f"/repos/{t.repo}/actions/runs/{r['id']}/attempts/1"
@@ -176,11 +176,22 @@ def collect(
         since = datetime.fromisoformat(workflow["created_at"]).date()
     until = until or datetime.now(UTC).date()
 
-    windows = []
-    for a, b in _months(since, until):
-        for p in _fetch_window(t, a, b):
-            fetch_details(t, read_json(p)["workflow_runs"], label=p.stem)
-            windows.append(p)
+    # One live display for the whole collection: in Jupyter every rich Live is its
+    # own output widget, so a bar per window leaves a trail of blank widgets.
+    windows, months = [], _months(since, until)
+    with Progress(
+        *Progress.get_default_columns(), MofNCompleteColumn(), console=log
+    ) as bar:
+        w_task = bar.add_task("windows", total=len(months))
+        r_task = bar.add_task("runs")
+        for a, b in months:
+            for p in _fetch_window(t, a, b):
+                runs = read_json(p)["workflow_runs"]
+                bar.reset(r_task, total=len(runs), description=p.stem)
+                fetch_details(t, bar.track(runs, task_id=r_task))
+                windows.append(p)
+            bar.advance(w_task)
+        bar.refresh()
 
     manifest = {
         "target": t._asdict(),

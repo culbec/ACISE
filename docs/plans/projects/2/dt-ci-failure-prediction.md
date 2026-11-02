@@ -1,6 +1,6 @@
 # Project 2 — From-scratch decision tree for CI failure prediction on self-collected GitHub Actions data
 
-Status: **ready for implementation (2026-11-02)**. D1, D2, D4 decided; D3 open (see end).
+Status: **ready for implementation (2026-11-02)**. D1, D2, D4, D5 decided; D3 open (see end).
 Theme: *Prediction of CI failures using ML-based algorithms.*
 Companion: [implementation-backbone.md](implementation-backbone.md).
 
@@ -142,6 +142,7 @@ Reference: Breiman, Friedman, Olshen & Stone, *Classification and Regression Tre
 - Metrics: precision, recall, F1, MCC, accuracy, confusion matrix, plus domain metrics (`% builds saved`, `% failures caught`).
 - Baselines: Parrot (previous outcome), majority class, the sklearn tree (reference only), and the random forest if the extension is built.
 - Statistics: paired Wilcoxon over folds, Vargha–Delaney A₁₂.
+- Sensitivity check (D5): the same CV repeated without the 2026-02-10 → 2026-06-10 regime rows.
 
 ### Validation on real-world examples (D4, decided)
 
@@ -208,6 +209,7 @@ Porting means re-running collection and build with new parameters (repository, w
 |---|---|
 | Master failures are mostly flaky, so the signal is weak | Report the flaky share (from reruns). Compare against Parrot honestly. A negative result with an explanation is still a valid result. |
 | Workflow definition changed over time (jobs added or renamed) | Use the workflow file's commit history to mark major changes. Add `days_since_workflow_change` if the drift plot shows breaks. |
+| Environment-caused failure regime (Feb–May 2026, Node 25.x job) inflates history-based results | D5: keep it, use T2 as the main target, repeat the CV without the regime rows. |
 | Too few failures in T2 | Check counts after collection. Fall back to T1 as the main target if T2 has fewer than ~300 failures. |
 | API caps hide older runs | Date windows of one month or less. Log the per-window count and assert it is below 1000. |
 | History starts only in 2025-09 for this workflow id | Collection starts at the workflow's `created_at`; ~10k runs are enough for a tree. |
@@ -219,3 +221,4 @@ Porting means re-running collection and build with new parameters (repository, w
 - **D2 (decided).** Copy the project 1 utilities into `projects/2` and generalise them there. Keep both copies separate until a shared library is decided on.
 - **D3 (open).** Random forest extension. Decide after the CART tree is built and validated.
 - **D4 (decided).** Develop on all data available at collection date `C`. Save the final model with skops. Before hand-off, re-test the saved model on runs created after `C`. Porting to another repository is optional future work.
+- **D5 (decided, 2026-11-02).** Keep the failure regime of 2026-02-10 → 2026-06-10 in the data. In that period a Node 25.x unit-test job failed on most runs, so the regime holds 54% of all failures (58% failure rate vs. 16% outside). The cause is the CI environment, not the pushed change. The regime is real CI behaviour, so it stays. Two consequences follow: T2 is the main target, because it is less affected (42% vs. 12% failure rate); and the tree notebook repeats the CV without the regime rows as a sensitivity check, with the same code and hyperparameter grid. Dropping the regime (cleaner signal, but it redefines the data) and ignoring Node-version jobs in the label (breaks the portability rule) were rejected.

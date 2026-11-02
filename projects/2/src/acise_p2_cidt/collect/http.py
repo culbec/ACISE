@@ -6,7 +6,7 @@ from typing import Any
 
 import requests
 
-from acise_p2_cidt.utils.logging.log import get_logger, log
+from acise_p2_cidt.utils.logging.log import get_logger
 
 API: str = "https://api.github.com"
 API_VERSION: str = "2022-11-28"
@@ -49,9 +49,10 @@ def _session() -> requests.Session:
 
 
 def _sleep(seconds: float, why: str) -> None:
+    # No `log.status` spinner: it would nest a second live display in the
+    # collection's progress bar.
     logger.warning("%s: sleeping %.0fs", why, seconds)
-    with log.status(f"{why}: sleeping {seconds:.0f}s"):
-        time.sleep(seconds)
+    time.sleep(seconds)
 
 
 def get(path: str, params: dict | None = None) -> Any:
