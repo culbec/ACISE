@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import datetime
 
 import numpy as np
@@ -83,19 +84,24 @@ def _ts(s: str | None) -> float:
 # =============================================================================
 
 
-def runs_frame(t: Target, salt: bytes) -> tuple[pd.DataFrame, dict[str, int]]:
+def runs_frame(
+    t: Target, salt: bytes, extra: list[dict] | None = None
+) -> tuple[pd.DataFrame, dict[str, int]]:
     """
     One row per run with its first-attempt label and times, oldest first.
 
     Args:
         t (Target): collection target (reads its raw cache).
         salt (bytes): salt for `hash_id`.
+        extra (list[dict] | None): raw runs not in the cache; they replace a cached
+            run with the same id.
 
     Returns:
         tuple[pd.DataFrame, dict[str, int]]: runs kept, and dropped counts per reason.
     """
     rows, dropped = [], defaultdict(int)
-    for r in cached_runs(t):
+    raw = {r["id"]: r for r in [*cached_runs(t), *(extra or [])]}
+    for r in raw.values():
         first = first_attempt(t, r)
         if first is None:
             dropped["first_attempt_not_collected"] += 1
@@ -171,19 +177,30 @@ def runs_frame(t: Target, salt: bytes) -> tuple[pd.DataFrame, dict[str, int]]:
 # =============================================================================
 
 
-def build(t: Target) -> tuple[pd.DataFrame, dict]:
+def build(
+    t: Target,
+    select: Callable[[pd.DataFrame], pd.Series] | None = None,
+    extra: list[dict] | None = None,
+) -> tuple[pd.DataFrame, dict]:
     """
     Joins the API cache and the git log into one row per run with every pre-run
     feature and the first-attempt label.
 
+    History features always sweep every run. The git features cost a few git calls
+    per run (about an hour for all n8n runs), so `select` limits them, and the
+    returned rows, to the runs that are needed.
+
     Args:
         t (Target): collection target; its raw cache must exist (`collect-runs`).
+        select (Callable | None): `runs_frame` frame -> bool mask of the rows to
+            return; None returns every run.
+        extra (list[dict] | None): raw runs not in the cache, as in `runs_frame`.
 
     Returns:
         tuple[pd.DataFrame, dict]: the table and its schema.
     """
     salt = _salt(t)
-    runs, dropped = runs_frame(t, salt)
+    runs, dropped = runs_frame(t, salt, extra)
     if runs.empty:
         raise FileNotFoundError(
             f"no runs cached for {t.repo}; run `collect-runs` first"
@@ -205,12 +222,15 @@ def build(t: Target) -> tuple[pd.DataFrame, dict]:
     tag_times = np.sort(git.tags(repo_dir)["commit_time"].to_numpy(float))
 
     hist = history_features(runs)
-    gitf = git_features(runs, hist, log_df, repo_dir, tag_times)
+    rows = None if select is None else np.flatnonzero(select(runs))
+    gitf = git_features(runs, hist, log_df, repo_dir, tag_times, rows)
 
     base = runs[["run_id", "head_sha", "author_id", "created_at", "failed",
                  "queue_delay", "merge_to_ci_delay", "author_is_bot"]]  # fmt: skip
     df = pd.concat([base, hist.drop(columns=["_prev_idx", "_green_idx"]), gitf], axis=1)
     df = pd.concat([df, runs[DIAGNOSTIC_COLS]], axis=1)
+    if rows is not None:
+        df = df.iloc[rows]
     df[ORDER_COL] = pd.to_datetime(df[ORDER_COL], unit="s", utc=True)
 
     skip = {*ID_COLS, ORDER_COL, LABEL_COL, *DIAGNOSTIC_COLS}

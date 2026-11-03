@@ -25,6 +25,9 @@ dependencies = [
 [project.scripts]
 collect-runs = "acise_p2_cidt.collect.gh_runs:main"
 build-dataset = "acise_p2_cidt.data.build:main"
+train-final = "acise_p2_cidt.validate.live:train_final_main"
+retest = "acise_p2_cidt.validate.live:retest_main"
+predict-run = "acise_p2_cidt.validate.live:predict_run_main"
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]

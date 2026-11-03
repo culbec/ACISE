@@ -193,6 +193,7 @@ def git_features(
     log: pd.DataFrame,
     repo_dir: pathlib.Path,
     tag_times: np.ndarray,
+    rows: np.ndarray | None = None,
 ) -> pd.DataFrame:
     """
     Change size and type, commit, file history, since-previous/green and workflow
@@ -205,10 +206,11 @@ def git_features(
         log (pd.DataFrame): `commit_log` output with an `author_id` column.
         repo_dir (pathlib.Path): the clone, for the diffs between run SHAs.
         tag_times (np.ndarray): sorted tag commit times (unix seconds).
+        rows (np.ndarray | None): positions of the runs to compute; None = all.
 
     Returns:
-        pd.DataFrame: one row per run, same index; NaN where `head_sha` is not on
-            the branch.
+        pd.DataFrame: one row per computed run, same index; NaN where `head_sha` is
+            not on the branch.
     """
     commits = log.drop_duplicates("sha").reset_index(drop=True)
     pos_of = dict(zip(commits["sha"], commits.index))
@@ -231,8 +233,9 @@ def git_features(
     empty = ch_log.iloc[:0]
     shas = runs["head_sha"].tolist()
 
+    rows = np.arange(len(runs)) if rows is None else rows
     out, missing = [], 0
-    for i in track(range(len(runs)), description="git features", console=console):
+    for i in track(rows, description="git features", console=console):
         sha, created = shas[i], runs["created_at"].iat[i]
         if sha not in pos_of:
             missing += 1
@@ -288,4 +291,4 @@ def git_features(
         logger.warning(
             "%d runs have a head_sha not on the branch: git features NaN", missing
         )
-    return pd.DataFrame(out, index=runs.index)
+    return pd.DataFrame(out, index=runs.index[rows])

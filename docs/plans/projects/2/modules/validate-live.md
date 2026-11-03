@@ -1,6 +1,6 @@
 # `validate/live.py`
 
-Status: todo (step 8). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_live.py`.
+Status: done (step 8). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_live.py`.
 
 ## Purpose
 
@@ -21,14 +21,16 @@ main()   # CLIs: `train-final`, `retest`, `predict-run`
 
 ## Sidecar (`.json` next to the `.skops` file)
 
-`repo`, `target`, `features`, `params`, `alpha`, `threshold`, `collected_at` (C), `n_train`, `trained_at`, code version (`git rev-parse HEAD` of this repository), and the SHA-256 of the `.skops` file. `load_model` checks the hash before loading.
+`repo`, `target`, `features`, `params`, `alpha`, `threshold`, `collected_at` (C), `cutoff`, `n_train`, `n_val`, `train_fail_rate`, `medians`, `trained_at`, code version (`git describe --always --dirty`), and the SHA-256 of the `.skops` file. `load_model` checks the hash before loading.
 
 ## Design decisions
 
 - **Training data for the final model.** `load(repo, target, until=C)`. Imputation medians are computed on these rows and stored in the sidecar, so new rows are imputed with training statistics, not their own.
 - **Retest flow.** `collect(t, since=C)` adds new windows to the same cache; `build(t)` rebuilds the whole table (old + new), so the new rows' history features see the old runs and earlier new runs, never later ones (the build's normal rule). Rows with `created_at > C` are scored by the loaded model **as saved**. Parrot and majority are scored on the same rows. The output frame has the same columns as the CV results, so `retest_vs_cv` plots both.
-- **`predict_run`.** Fetch the run (by id, or the latest master run for a SHA) into the cache, rebuild, take its row, impute with the sidecar medians, and return the label if known, `P(fail)`, the prediction at the saved threshold, and `explain(x)`. Rebuilding the whole table is simpler than an incremental path and takes seconds at this size. Full rebuild per call; add incremental feature computation only if the CLI is used in a loop.
-- **skops loading** passes `trusted=["acise_p2_cidt.tree.cart.CART", "acise_p2_cidt.tree.cart.Tree"]` plus any NumPy types that `skops.io.get_untrusted_types` reports at save time. That list is stored in the sidecar and compared on load, so an unexpected type fails loudly.
+- **Partial build.** A full build takes about an hour, almost all of it in the per-run git calls of `git_features`. `build(t, select=...)` still sweeps the history features over every run (cheap), but computes git features and returns rows only where `select` is true: runs after `C` for `retest`, one run for `predict_run`. The processed table and the manifest are never overwritten, so the CV stays reproducible. `fetch_windows` tops up the cache; a window saved before its last day ended is fetched again.
+- **`predict_run`.** Fetch the run (by id, or the latest master run for a SHA), top up the cache since `C`, build its row, impute with the sidecar medians, and return the label if known, `P(fail)`, the prediction at the saved threshold, `in_target`, and `explain(x)` (None for a forest).
+- **skops loading.** `TRUSTED` lists `CART`, `Tree` and `RandomForest`; NumPy arrays and builtins are trusted by skops already. Save and load both check `get_untrusted_types` against it, so an unexpected type fails loudly.
+- **Final fit.** Same protocol as one CV fold on all runs up to `C`: fit on the head, alpha and threshold on the last 20%, no refit. `--params` fixes the hyperparameters; without it the grid search runs on that split. `C` (`cutoff`) is the last training run's `created_at`.
 - A run still in progress gets a prediction with label "unknown"; this is the live use case.
 
 ## Verification

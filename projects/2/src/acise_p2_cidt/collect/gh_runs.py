@@ -104,7 +104,9 @@ def _fetch_window(t: Target, a: date, b: date) -> list[pathlib.Path]:
     windows already on disk.
     """
     out = raw_dir(t) / "runs" / f"{a}_{b}.json"
-    if out.exists():
+    # A window saved before its last day ended misses later runs and holds runs
+    # still in progress, so it is fetched again.
+    if out.exists() and datetime.fromtimestamp(out.stat().st_mtime, UTC).date() > b:
         return [out]
     split = out.with_suffix(".split")
     if not split.exists():
@@ -154,6 +156,38 @@ def fetch_details(t: Target, runs: Iterable[dict]) -> int:
     return n
 
 
+def fetch_windows(t: Target, since: date, until: date) -> list[pathlib.Path]:
+    """
+    Runs of every month window in `[since, until]`, each followed by its details.
+    Windows on disk cost no call unless they were saved before their last day ended.
+
+    Args:
+        t (Target): collection target.
+        since (date): first day.
+        until (date): last day.
+
+    Returns:
+        list[pathlib.Path]: the window files.
+    """
+    # One live display for the whole collection: in Jupyter every rich Live is its
+    # own output widget, so a bar per window leaves a trail of blank widgets.
+    windows, months = [], _months(since, until)
+    with Progress(
+        *Progress.get_default_columns(), MofNCompleteColumn(), console=log
+    ) as bar:
+        w_task = bar.add_task("windows", total=len(months))
+        r_task = bar.add_task("runs")
+        for a, b in months:
+            for p in _fetch_window(t, a, b):
+                runs = read_json(p)["workflow_runs"]
+                bar.reset(r_task, total=len(runs), description=p.stem)
+                fetch_details(t, bar.track(runs, task_id=r_task))
+                windows.append(p)
+            bar.advance(w_task)
+        bar.refresh()
+    return windows
+
+
 def collect(
     t: Target, since: date | None = None, until: date | None = None
 ) -> pathlib.Path:
@@ -175,23 +209,7 @@ def collect(
         workflow = http.get(f"/repos/{t.repo}/actions/workflows/{t.workflow_id}")
         since = datetime.fromisoformat(workflow["created_at"]).date()
     until = until or datetime.now(UTC).date()
-
-    # One live display for the whole collection: in Jupyter every rich Live is its
-    # own output widget, so a bar per window leaves a trail of blank widgets.
-    windows, months = [], _months(since, until)
-    with Progress(
-        *Progress.get_default_columns(), MofNCompleteColumn(), console=log
-    ) as bar:
-        w_task = bar.add_task("windows", total=len(months))
-        r_task = bar.add_task("runs")
-        for a, b in months:
-            for p in _fetch_window(t, a, b):
-                runs = read_json(p)["workflow_runs"]
-                bar.reset(r_task, total=len(runs), description=p.stem)
-                fetch_details(t, bar.track(runs, task_id=r_task))
-                windows.append(p)
-            bar.advance(w_task)
-        bar.refresh()
+    windows = fetch_windows(t, since, until)
 
     manifest = {
         "target": t._asdict(),
