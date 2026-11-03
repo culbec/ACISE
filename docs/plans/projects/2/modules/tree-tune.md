@@ -1,6 +1,6 @@
 # `tree/tune.py`
 
-Status: todo (step 6). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_tune.py`.
+Status: done (step 6). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_tune.py`.
 
 ## Purpose
 
@@ -32,11 +32,11 @@ fit_predict(split, params: dict | None = None) -> Result
 
 ## Design decisions
 
-- **Everything is chosen on `split.X_val` / `split.y_val`**, never on test. Score: MCC (`metrics.mcc`), as in project 1, because it stays meaningful under imbalance.
-- **Order inside one grid point:** fit on the fit rows → walk the pruning path and keep the alpha with the best validation MCC (at threshold 0.5) → tune the threshold on the pruned tree's validation probabilities. Ties go to the larger alpha (smaller tree), then to the threshold nearer 0.5.
-- **Thresholds** tried: the distinct validation probabilities (at most ~leaf count, since a tree has few distinct outputs), plus 0.5.
+- **Everything is chosen on `split.X_val` / `split.y_val`**, never on test. Score: MCC (`sklearn.metrics.matthews_corrcoef`, the same function `metrics.scores` reports), as in project 1, because it stays meaningful under imbalance.
+- **Order inside one grid point:** fit on the fit rows → walk the pruning path and keep the alpha with the best validation MCC (at threshold 0.5) → tune the threshold on the pruned tree's validation probabilities. Ties go to the larger alpha (smaller tree), then to the threshold nearer 0.5. Across grid points, ties go to the first point in grid order (smallest depth first).
+- **Thresholds** tried: the distinct validation probabilities (at most ~leaf count, since a tree has few distinct outputs), plus 0.5. Prediction is `P(fail) > threshold`, as in `CART.predict`.
 - **The final model is not refitted on fit + val.** Refitting would change the tree after alpha and threshold were chosen for it. This matches the project 1 protocol (val = the tail of train, used for choices).
-- `Result.payload` holds the `Choice`, the fitted tree, and the grid frame, for the notebooks.
+- `Result.payload` is `{"choice", "tree", "grid"}` for the notebooks; the grid frame has one row per point (params, alpha, threshold, val_mcc, depth, n_leaves), and is `None` when `params` is given.
 - Grid size 5 × 3 × 2 × 2 = 60 fits per fold, each well under a second on ~4k rows.
 - **Tuning on the dev segment for the paper table** uses `dev_split` from `training/cv.py`, as in project 1.
 
@@ -44,4 +44,4 @@ fit_predict(split, params: dict | None = None) -> Result
 
 - A synthetic split where depth 2 is optimal: `grid_search` picks depth ≤ 3, and the chosen alpha prunes back a depth-8 tree.
 - `choose_threshold` on hand-made probabilities picks the value that maximises MCC (hand-computed).
-- `fit_predict` never reads `X_test` before predicting (a test passes a split whose `X_test` raises on access until predict is called).
+- `fit_predict` never reads `X_test` before predicting: a split-like object logs each `X_test` read, `CART.fit` is wrapped to log each fit, and the log must be exactly one fit, then one `X_test` read.

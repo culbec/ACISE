@@ -14,8 +14,8 @@ Dependencies: `numpy`, `pandas`, `scipy`, `plotly`, `kaleido`, `requests`, `rich
 | 2 | `collect/git_changes.py` | [collect-git-changes](modules/collect-git-changes.md) | done | Local clone, one-pass `git log` table, diffs between run SHAs, generic file classifier. No API calls. |
 | 3 | `data/build.py`, `data/history.py` | [data-build](modules/data-build.md) | done | Joins API and git data. One chronological pass computes all features under the completed-before rule. Writes `<repo>.csv` and `schema.json`. CLI `build-dataset`. |
 | 4 | `data/load.py` | [data-load](modules/data-load.md) | done | Loads a built table into the project 1 `Dataset` shape: T1/T2, dev cut, drop non-features. |
-| 5 | `tree/cart.py` | [tree-cart](modules/tree-cart.md) | todo | From-scratch CART following Breiman et al. (1984). |
-| 6 | `tree/tune.py` | [tree-tune](modules/tree-tune.md) | todo | Grid search, pruning-alpha and threshold choice on validation; `fit_predict` for `training/cv.py`. |
+| 5 | `tree/cart.py` | [tree-cart](modules/tree-cart.md) | done | From-scratch CART following Breiman et al. (1984). |
+| 6 | `tree/tune.py` | [tree-tune](modules/tree-tune.md) | done | Grid search, pruning-alpha and threshold choice on validation; `fit_predict` for `training/cv.py`. |
 | 7 | `tree/forest.py` | — | open (D3) | Bagging plus random feature subsets over `tree/cart.py`. No spec until D3 is decided. |
 | 8 | `validate/live.py` | [validate-live](modules/validate-live.md) | todo | `train-final` (skops dump), `retest` on runs after `C`, `predict-run` with an explained decision path. |
 

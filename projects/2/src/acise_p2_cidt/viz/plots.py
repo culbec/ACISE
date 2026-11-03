@@ -383,11 +383,12 @@ def metrics_box(df: pd.DataFrame) -> go.Figure:
     Args:
         df (pd.DataFrame): long format DF with cols `method`, `metric`, `value`.
     Returns:
-        go.Figure: box plot, with one facet per metric, every per-fold point overlaid.
+        go.Figure: box plot, with one facet per metric, every per-fold point overlaid;
+            the dashed line is the mean and the diamond spans mean +- 1 std.
     """
     return px.box(
         df, x="method", y="value", color="method", facet_col="metric", points="all"
-    )
+    ).update_traces(boxmean="sd")
 
 
 def retest_vs_cv(
