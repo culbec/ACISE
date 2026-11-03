@@ -120,14 +120,15 @@ def clean(
     min_minority: float = 0.01,
 ) -> pd.DataFrame:
     """
-    Drops mostly-missing, near-constant and rare-binary columns, then median-imputes
-    the rest. Nominal columns are dropped before, from the schema.
+    Drops mostly-missing, near-constant and rare two-valued columns, then
+    median-imputes the rest. Nominal columns are dropped before, from the schema.
 
     Args:
         X (pd.DataFrame): raw feature frame (dev rows).
         max_nan (float): maximum missing-value ratio a column may have.
         var_thr (float): `VarianceThreshold` on percentile ranks.
-        min_minority (float): minimum share of the minority value in a binary column.
+        min_minority (float): minimum share of the minority value in a two-valued
+            column.
 
     Returns:
         pd.DataFrame: cleaned, imputed frame.
@@ -138,8 +139,15 @@ def clean(
     # to near-zero variance although it has hundreds of distinct values.
     keep = VarianceThreshold(var_thr).fit(X.rank(pct=True)).get_support()
     X = X.loc[:, keep]
-    # a 1%-minority binary still has variance ~0.01, so the threshold above misses it
-    rare = [c for c in _binary(X) if min(X[c].mean(), 1 - X[c].mean()) < min_minority]
+    # A 1%-minority flag still has rank variance above the threshold, so it is
+    # checked on its own. Any two-valued column counts, not only 0/1: `n_parents`
+    # (1 or 2) is a flag in all but name.
+    rare = [
+        c
+        for c in X
+        if X[c].nunique() == 2
+        and X[c].value_counts(normalize=True).min() < min_minority
+    ]
     return X.drop(columns=rare)
 
 

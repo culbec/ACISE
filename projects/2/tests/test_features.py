@@ -16,6 +16,7 @@ def synthetic(n=600, seed=0):
             "flag": np.where(rng.random(n) < 0.15, 1 - y, y),  # informative binary
             "constant": 1.0,
             "rare_flag": (np.arange(n) == 0).astype(int),  # minority < 1%
+            "rare_one_two": 1 + (np.arange(n) == 1).astype(int),  # same, coded 1/2
             # many distinct values, one huge outlier: min-max variance ~1e-6
             "heavy_tail": np.r_[rng.integers(0, 50, n - 1), 1e6],
             "day_of_week": y * 3,  # nominal: excluded despite being predictive
@@ -35,7 +36,8 @@ def test_select_features():
     s = select_features(synthetic(), n_max=4, n_boot=10)
     assert s.features[:2] == ["signal", "flag"] or s.features[:2] == ["flag", "signal"]
     assert "signal_dup" not in s.features
-    assert {"constant", "rare_flag", "day_of_week"} <= set(s.meta["dropped_in_clean"])
+    dropped = {"constant", "rare_flag", "rare_one_two", "day_of_week"}
+    assert dropped <= set(s.meta["dropped_in_clean"])
     assert "heavy_tail" not in s.meta["dropped_in_clean"]
     # picks of the duplicate are credited to the family representative
     assert s.stability["flag"] == 1 and s.stability["signal"] == 1
