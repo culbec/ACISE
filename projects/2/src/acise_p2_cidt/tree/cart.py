@@ -5,6 +5,8 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
+from acise_p2_cidt.tree.prune import collapse, pruning_steps
+
 Criterion = Literal["gini", "entropy"]
 
 EPSILON: float = float(np.finfo(np.float64).eps)
@@ -48,6 +50,7 @@ def _best_split(
     w_root: float,
     min_samples_leaf: int,
     criterion: Criterion,
+    cols: np.ndarray,
 ) -> tuple[int, float, float]:
     """
     Best split of one node over all features (Breiman Ch. 2).
@@ -64,10 +67,12 @@ def _best_split(
         w_root (float): total weight at the root, normalises the gain.
         min_samples_leaf (int): minimum rows on each side.
         criterion (Criterion): impurity measure.
+        cols (np.ndarray): sorted columns to search (all, or a random-forest draw).
 
     Returns:
         tuple[int, float, float]: feature, threshold, gain; feature -1 if none.
     """
+    Xn = Xn[:, cols]
     n, p = Xn.shape
     if n < 2 * min_samples_leaf:
         return -1, np.nan, -np.inf
@@ -99,7 +104,7 @@ def _best_split(
     t = a / 2.0 + b / 2.0
     if t == b or not np.isfinite(t):  # midpoint rounded up to b: keep a on the left
         t = a
-    return j, float(t), float(best[j])
+    return int(cols[j]), float(t), float(best[j])
 
 
 # =============================================================================
@@ -138,82 +143,6 @@ def _importances(tree: Tree, n_features: int) -> np.ndarray:
     return out / out.sum() if out.sum() > 0 else out
 
 
-def _collapse(tree: Tree, cut: set[int]) -> Tree:
-    """Copy of `tree` with every node in `cut` turned into a leaf, renumbered."""
-    keep: list[int] = []
-    stack = [0]
-    while stack:
-        i = stack.pop()
-        keep.append(i)
-        if tree.left[i] >= 0 and i not in cut:
-            stack += [tree.right[i], tree.left[i]]
-    old = np.array(keep)
-    new_id = np.full(len(tree.feature), -1)
-    new_id[old] = np.arange(len(old))
-    leaf = (tree.left[old] < 0) | np.isin(old, list(cut))
-    return Tree(
-        feature=np.where(leaf, -1, tree.feature[old]),
-        threshold=np.where(leaf, np.nan, tree.threshold[old]),
-        left=np.where(leaf, -1, new_id[tree.left[old]]),
-        right=np.where(leaf, -1, new_id[tree.right[old]]),
-        value=tree.value[old].copy(),
-        n_samples=tree.n_samples[old].copy(),
-        impurity=tree.impurity[old].copy(),
-    )
-
-
-def _pruning_steps(tree: Tree) -> tuple[list[float], list[float], list[int]]:
-    """
-    Weakest-link pruning sequence (Breiman Ch. 3, minimal cost-complexity).
-
-    `R(t)` is the node impurity times its weight share of the root, as in sklearn,
-    not Breiman's misclassification cost. Each step collapses the internal node with
-    the smallest `g(t) = (R(t) - R(T_t)) / (|leaves(T_t)| - 1)`; ties go to the
-    lowest node id.
-
-    Returns:
-        tuple[list[float], list[float], list[int]]: alpha of each step (first 0),
-            total leaf R after it, and the node collapsed (-1 for the first entry).
-    """
-    n = len(tree.feature)
-    w = tree.value.sum(axis=1)
-    r_node = tree.impurity * w / w[0]
-    parent = np.full(n, -1)
-    inner = tree.left >= 0
-    parent[tree.left[inner]] = np.flatnonzero(inner)
-    parent[tree.right[inner]] = np.flatnonzero(inner)
-
-    r_branch, n_leaves = r_node.copy(), np.ones(n, dtype=int)
-    for i in range(n - 1, -1, -1):  # children before parents (reverse pre-order)
-        if tree.left[i] >= 0:
-            r_branch[i] = r_branch[tree.left[i]] + r_branch[tree.right[i]]
-            n_leaves[i] = n_leaves[tree.left[i]] + n_leaves[tree.right[i]]
-
-    alphas, totals, nodes = [0.0], [float(r_branch[0])], [-1]
-    candidate = inner.copy()
-    while candidate[0]:
-        with np.errstate(divide="ignore", invalid="ignore"):
-            g = np.where(candidate, (r_node - r_branch) / (n_leaves - 1), np.inf)
-        t = int(g.argmin())
-        r_diff, leaves_lost = r_node[t] - r_branch[t], n_leaves[t] - 1
-        stack = [t]
-        while stack:  # the collapsed subtree's nodes stop being candidates
-            i = stack.pop()
-            candidate[i] = False
-            if tree.left[i] >= 0:
-                stack += [tree.left[i], tree.right[i]]
-        r_branch[t], n_leaves[t] = r_node[t], 1
-        a = parent[t]
-        while a >= 0:
-            r_branch[a] += r_diff
-            n_leaves[a] -= leaves_lost
-            a = parent[a]
-        alphas.append(float(g[t]))
-        totals.append(float(r_branch[0]))
-        nodes.append(t)
-    return alphas, totals, nodes
-
-
 def _fmt(v: float) -> str:
     return f"{v:.6g}"
 
@@ -241,6 +170,9 @@ class CART:
         class_weight (Literal["balanced"] | None): "balanced" weights class k by
             n / (2 * n_k).
         ccp_alpha (float): cost-complexity pruning alpha applied after growing.
+        max_features (int | None): columns drawn at random at each node, as in a
+            random forest (Breiman, 2001); None searches all columns.
+        random_state (int | None): seed of that draw.
     """
 
     def __init__(
@@ -252,6 +184,8 @@ class CART:
         min_impurity_decrease: float = 0.0,
         class_weight: Literal["balanced"] | None = None,
         ccp_alpha: float = 0.0,
+        max_features: int | None = None,
+        random_state: int | None = None,
     ):
         valid = {
             "criterion": criterion in ("gini", "entropy"),
@@ -261,6 +195,7 @@ class CART:
             "min_impurity_decrease": min_impurity_decrease >= 0,
             "class_weight": class_weight in (None, "balanced"),
             "ccp_alpha": ccp_alpha >= 0,
+            "max_features": max_features is None or max_features >= 1,
         }
         for name, ok in valid.items():
             if not ok:
@@ -272,6 +207,8 @@ class CART:
         self.min_impurity_decrease = min_impurity_decrease
         self.class_weight = class_weight
         self.ccp_alpha = ccp_alpha
+        self.max_features = max_features
+        self.random_state = random_state
 
     def fit(
         self,
@@ -314,6 +251,8 @@ class CART:
         w0, w1 = np.where(yv, 0.0, sw), np.where(yv, sw, 0.0)
         w_root = float(sw.sum())
         max_depth = self.max_depth if self.max_depth is not None else np.inf
+        rng, p = np.random.default_rng(self.random_state), self.n_features_
+        k = min(self.max_features or p, p)
 
         # One row per node: feature, threshold, left, right, v0, v1, n_samples, imp.
         rows: list[list[float]] = []
@@ -333,9 +272,12 @@ class CART:
                 or node_imp <= EPSILON
             ):
                 continue
+            # Sorted draw: equal-gain ties still go to the first column. A draw with
+            # no valid split makes a leaf (sklearn would draw more columns).
+            cols = np.arange(p) if k == p else np.sort(rng.choice(p, k, replace=False))
             j, t, gain = _best_split(
                 A[idx], w0[idx], w1[idx], node_imp, w_root,
-                self.min_samples_leaf, self.criterion,
+                self.min_samples_leaf, self.criterion, cols,
             )  # fmt: skip
             # As sklearn: a zero-gain split is kept at the default 0.0, so a parity
             # or XOR pattern can still be split below the root.
@@ -376,7 +318,7 @@ class CART:
             tuple[np.ndarray, np.ndarray]: alphas (increasing, first 0) and the total
                 leaf impurity of the subtree at each alpha.
         """
-        alphas, totals, _ = _pruning_steps(self.tree_)
+        alphas, totals, _ = pruning_steps(self.tree_)
         return np.array(alphas), np.array(totals)
 
     def pruned(self, alpha: float) -> CART:
@@ -391,10 +333,10 @@ class CART:
         """
         if alpha < 0:
             raise ValueError(f"alpha must be >= 0, got {alpha!r}")
-        alphas, _, nodes = _pruning_steps(self.tree_)
+        alphas, _, nodes = pruning_steps(self.tree_)
         cut = {t for a, t in zip(alphas[1:], nodes[1:]) if a <= alpha}
         out = copy.copy(self)
-        out._set_tree(_collapse(self.tree_, cut))
+        out._set_tree(collapse(self.tree_, cut))
         return out
 
     def _rows(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
