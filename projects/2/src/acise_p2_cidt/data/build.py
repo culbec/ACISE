@@ -31,6 +31,9 @@ from acise_p2_cidt.utils.logging.log import get_logger, log
 
 # Every other conclusion (cancelled, skipped, ...) is dropped and counted.
 KEEP: frozenset[str] = frozenset({"success", "failure"})
+# GitHub bumps `updated_at` of a run when it cleans it up (~400 days after it ran),
+# so a run "lasting" longer than this was touched later, not completed then.
+MAX_RUN_SECS: float = 24 * 3600
 
 ID_COLS: list[str] = ["run_id", "head_sha", "author_id"]
 DIAGNOSTIC_COLS: list[str] = [
@@ -102,27 +105,34 @@ def runs_frame(t: Target, salt: bytes) -> tuple[pd.DataFrame, dict[str, int]]:
             continue
         failed = int(first["conclusion"] == "failure")
         jobs_p = raw_dir(t) / "jobs" / f"{r['id']}.json"
+        jobs = read_json(jobs_p)["jobs"] if jobs_p.exists() else None
         if not failed:
             failed_jobs: list[str] | None = []
-        elif jobs_p.exists():
-            jobs = read_json(jobs_p)["jobs"]
+        elif jobs is not None:
             failed_jobs = [j["name"] for j in jobs if j["conclusion"] == "failure"]
         else:
             failed_jobs = None
         head = r.get("head_commit") or {}
         author = head.get("author") or {}
         created, started = _ts(r["created_at"]), _ts(first["run_started_at"])
+        completed, latest = _ts(first["updated_at"]), _ts(r["updated_at"])
+        if completed - started > MAX_RUN_SECS:
+            # the last job's end is the true completion; NaN = estimated below
+            ends = [_ts(j.get("completed_at")) for j in jobs or []]
+            completed = np.nanmax(ends) if ends else np.nan
+        if latest - started > MAX_RUN_SECS:
+            latest = completed
         rows.append(
             {
                 "run_id": r["id"],
                 "head_sha": r["head_sha"],
                 "author_id": hash_id(author.get("email", ""), salt),
                 "created_at": created,
-                "completed_at": _ts(first["updated_at"]),
+                "completed_at": completed,
                 # a re-run's outcome is known only once its last attempt ends
-                "latest_completed_at": _ts(r["updated_at"]),
+                "latest_completed_at": latest,
                 "failed": failed,
-                "duration": _ts(first["updated_at"]) - started,
+                "duration": completed - started,
                 "queue_delay": started - created,
                 "merge_to_ci_delay": created - _ts(head.get("timestamp")),
                 "n_failed_jobs": np.nan if failed_jobs is None else len(failed_jobs),
@@ -140,6 +150,19 @@ def runs_frame(t: Target, salt: bytes) -> tuple[pd.DataFrame, dict[str, int]]:
     df = pd.DataFrame(rows)
     if len(df):
         df = df.sort_values(["created_at", "run_id"], kind="stable")
+        # Runs without a usable completion time are placed in time with the median
+        # run length, so the history still counts them; `duration` stays NaN.
+        lost = df["completed_at"].isna()
+        if lost.any():
+            est = df["created_at"] + (df["completed_at"] - df["created_at"]).median()
+            df.loc[lost, "completed_at"] = est[lost]
+            df["latest_completed_at"] = df["latest_completed_at"].fillna(
+                df["completed_at"]
+            )
+            logger.warning(
+                "%d runs have a clean-up `updated_at`: completion estimated",
+                lost.sum(),
+            )
     return df.reset_index(drop=True), dict(dropped)
 
 

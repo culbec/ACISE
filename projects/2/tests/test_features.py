@@ -16,6 +16,8 @@ def synthetic(n=600, seed=0):
             "flag": np.where(rng.random(n) < 0.15, 1 - y, y),  # informative binary
             "constant": 1.0,
             "rare_flag": (np.arange(n) == 0).astype(int),  # minority < 1%
+            # many distinct values, one huge outlier: min-max variance ~1e-6
+            "heavy_tail": np.r_[rng.integers(0, 50, n - 1), 1e6],
             "day_of_week": y * 3,  # nominal: excluded despite being predictive
             **{f"noise{i}": rng.normal(0, 1, n) for i in range(5)},
         }
@@ -34,6 +36,7 @@ def test_select_features():
     assert s.features[:2] == ["signal", "flag"] or s.features[:2] == ["flag", "signal"]
     assert "signal_dup" not in s.features
     assert {"constant", "rare_flag", "day_of_week"} <= set(s.meta["dropped_in_clean"])
+    assert "heavy_tail" not in s.meta["dropped_in_clean"]
     # picks of the duplicate are credited to the family representative
     assert s.stability["flag"] == 1 and s.stability["signal"] == 1
     assert s.stability["signal_dup"] == 0
@@ -62,3 +65,10 @@ def test_drift():
         synthetic(), [np.arange(300), np.arange(600)], ["signal", "flag"], n_max=4
     )
     assert t.shape == (2, 2) and t.all().all()
+
+
+def test_exclude():
+    s = select_features(synthetic(), n_max=4, n_boot=2, exclude=("signal",))
+    assert "signal" not in s.features and "signal" not in s.scores.index
+    assert s.meta["excluded"] == ["signal"]
+    assert "signal" not in s.meta["dropped_in_clean"]

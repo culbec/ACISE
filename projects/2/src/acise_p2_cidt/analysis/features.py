@@ -13,7 +13,6 @@ from sklearn.feature_selection import (
     mutual_info_classif,
 )
 from sklearn.inspection import permutation_importance
-from sklearn.preprocessing import MinMaxScaler
 
 from acise_p2_cidt.data.load import Dataset
 
@@ -127,7 +126,7 @@ def clean(
     Args:
         X (pd.DataFrame): raw feature frame (dev rows).
         max_nan (float): maximum missing-value ratio a column may have.
-        var_thr (float): `VarianceThreshold` on min-max scaled data.
+        var_thr (float): `VarianceThreshold` on percentile ranks.
         min_minority (float): minimum share of the minority value in a binary column.
 
     Returns:
@@ -135,7 +134,9 @@ def clean(
     """
     X = X.loc[:, X.isna().mean() <= max_nan]
     X = X.fillna(X.median())
-    keep = VarianceThreshold(var_thr).fit(MinMaxScaler().fit_transform(X)).get_support()
+    # Ranks, not min-max: one huge outlier squeezes a min-max-scaled count column
+    # to near-zero variance although it has hundreds of distinct values.
+    keep = VarianceThreshold(var_thr).fit(X.rank(pct=True)).get_support()
     X = X.loc[:, keep]
     # a 1%-minority binary still has variance ~0.01, so the threshold above misses it
     rare = [c for c in _binary(X) if min(X[c].mean(), 1 - X[c].mean()) < min_minority]
@@ -353,6 +354,7 @@ def select_features(
     n_boot: int = 20,
     rho: float = 0.8,
     seed: int = 0,
+    exclude: tuple[str, ...] = (),
 ) -> Selection:
     """
     Full selection on `ds`'s dev rows only. Imputation and scaling here are local;
@@ -368,12 +370,14 @@ def select_features(
         n_boot (int): number of subsamples.
         rho (float): pruning threshold.
         seed (int): random state.
+        exclude (tuple[str, ...]): features removed before selection, by decision
+            (recorded in `meta["excluded"]`).
 
     Returns:
         Selection: frozen feature list with scores, stability, embedded check and meta.
     """
     dev = np.flatnonzero(ds.dev_mask)
-    X = _without_nominal(ds, dev)
+    X = _without_nominal(ds, dev).drop(columns=list(exclude))
     y = ds.y.iloc[dev].reset_index(drop=True)
 
     Xc, scores, kept = _select(X, y, rho, seed)
@@ -395,7 +399,10 @@ def select_features(
             "repo": ds.meta["repo"],
             "dev_rows": len(X),
             "dev_failed": int(y.sum()),
-            "dropped_in_clean": sorted(set(ds.X.columns) - set(Xc.columns)),
+            "excluded": list(exclude),
+            "dropped_in_clean": sorted(
+                set(ds.X.columns) - set(exclude) - set(Xc.columns)
+            ),
             "params": {
                 "n_max": n_max,
                 "min_freq": min_freq,

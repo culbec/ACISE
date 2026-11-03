@@ -137,20 +137,20 @@ def raw(tmp_path, monkeypatch):
         _git(repo, "commit", "-q", "-m", f"c{i}", env=env)
         shas.append(_git(repo, "rev-parse", "HEAD"))
 
-    def run(i, attempt=1, conclusion="success", status="completed"):
+    def run(i, attempt=1, conclusion="success", status="completed", end=300):
         c = t0 + i * 1000 + 10
         return {
             "id": 100 + i, "run_attempt": attempt, "status": status, "conclusion": conclusion,
             "head_sha": shas[i], "created_at": _iso(c), "run_started_at": _iso(c + 5),
-            "updated_at": _iso(c + 300), "path": ".github/workflows/ci.yml",
+            "updated_at": _iso(c + end), "path": ".github/workflows/ci.yml",
             "actor": {"login": LOGIN, "type": "User"},
             "head_commit": {"timestamp": _iso(c - 10), "author": {"email": EMAIL}},
         }  # fmt: skip
 
     runs = [
-        run(0),
+        run(0, end=400 * 86400),  # updated_at bumped by GitHub's clean-up
         run(1, attempt=2),
-        run(2, conclusion="failure"),
+        run(2, conclusion="failure", end=400 * 86400),
         run(3, conclusion="cancelled"),
     ]
     gh_runs._write_json(
@@ -162,7 +162,22 @@ def raw(tmp_path, monkeypatch):
     gh_runs._write_json(
         d / "jobs" / "101.json", {"jobs": [{"name": "unit", "conclusion": "failure"}]}
     )
+    job = {"name": "unit", "conclusion": "failure", "completed_at": _iso(t0 + 2410)}
+    gh_runs._write_json(d / "jobs" / "102.json", {"jobs": [job]})
     return d
+
+
+def test_cleanup_updated_at_is_not_a_completion(raw):
+    runs, _ = build.runs_frame(T, b"salt")
+    c0 = 1_767_225_600 + 10
+    # run 2 ends with its last job: 2410 - 2015 (started) = 395 s
+    assert runs.loc[2, "duration"] == pytest.approx(395)
+    assert runs.loc[2, "completed_at"] == c0 + 2400
+    # run 0 has no jobs: duration unknown, completion = created + median run length
+    # (runs 1 and 2 complete 300 s and 400 s after creation -> median 350 s)
+    assert np.isnan(runs.loc[0, "duration"])
+    assert runs.loc[0, "completed_at"] == c0 + 350
+    assert runs.loc[0, "latest_completed_at"] == runs.loc[0, "completed_at"]
 
 
 def test_build_end_to_end(raw):

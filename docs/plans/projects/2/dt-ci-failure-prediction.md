@@ -1,6 +1,6 @@
 # Project 2 — From-scratch decision tree for CI failure prediction on self-collected GitHub Actions data
 
-Status: **ready for implementation (2026-11-02)**. D1, D2, D4, D5 decided; D3 open (see end).
+Status: **ready for implementation (2026-11-02)**. D1, D2, D4, D5, D6 decided; D3 open (see end).
 Theme: *Prediction of CI failures using ML-based algorithms.*
 Companion: [implementation-backbone.md](implementation-backbone.md).
 
@@ -222,3 +222,4 @@ Porting means re-running collection and build with new parameters (repository, w
 - **D3 (open).** Random forest extension. Decide after the CART tree is built and validated.
 - **D4 (decided).** Develop on all data available at collection date `C`. Save the final model with skops. Before hand-off, re-test the saved model on runs created after `C`. Porting to another repository is optional future work.
 - **D5 (decided, 2026-11-02).** Keep the failure regime of 2026-02-10 → 2026-06-10 in the data. In that period a Node 25.x unit-test job failed on most runs, so the regime holds 54% of all failures (58% failure rate vs. 16% outside). The cause is the CI environment, not the pushed change. The regime is real CI behaviour, so it stays. Two consequences follow: T2 is the main target, because it is less affected (42% vs. 12% failure rate); and the tree notebook repeats the CV without the regime rows as a sensitivity check, with the same code and hyperparameter grid. Dropping the regime (cleaner signal, but it redefines the data) and ignoring Node-version jobs in the label (breaks the portability rule) were rejected.
+- **D6 (decided, 2026-11-03).** Feature selection inputs, from the EDA. (a) `merge_to_ci_delay` is excluded: it jumps from ~4 s to ~1,100 s on 2026-01-18 (a change in how n8n merges), right after the T2 dev segment ends, so any threshold would split time periods, not changes. (b) `flaky_rate_24h` and `flaky_rate_7d` are excluded: re-runs happened mostly early (118 of 149 non-zero T2 values are in the dev segment, from ~9 flaky runs), so they look relevant on the dev rows and are ~0 afterwards. Both exclusions go through `select_features(exclude=...)` and are recorded in the selection meta. (c) `clean()` checks near-constant columns on percentile ranks instead of min-max values, so heavy-tailed counts (`deletions`, `commits_since_*`) are no longer dropped by one outlier. (d) `author_is_bot` stays dropped as a rare binary on the dev rows (0.5%), although it reaches 10% later; forcing it in would use later rows for a choice.
