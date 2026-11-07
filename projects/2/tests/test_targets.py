@@ -82,7 +82,7 @@ def test_enabled_only_and_find_disabled(tmp_path):
 
 def test_repo_registry_is_valid():
     cfgs = load_targets(REGISTRY, enabled_only=False)
-    assert len(cfgs) == 14 and not any(c.enabled for c in cfgs)  # phase 1: all off
+    assert len(cfgs) == 14
     assert find_target("n8n-io__n8n__33323319@master").target.branch == "master"
 
 

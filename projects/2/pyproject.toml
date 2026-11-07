@@ -28,6 +28,7 @@ build-dataset = "acise_p2_cidt.data.build:main"
 train-final = "acise_p2_cidt.validate.live:train_final_main"
 retest = "acise_p2_cidt.validate.live:retest_main"
 predict-run = "acise_p2_cidt.validate.live:predict_run_main"
+label-check = "acise_p2_cidt.analysis.labels:main"
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]
@@ -38,3 +39,6 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.17.3",
 ]
+
+[tool.pytest.ini_options]
+markers = ["notebook: runs a notebook on the mock pool (slow)"]

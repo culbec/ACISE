@@ -16,7 +16,7 @@ Code-level companion to [plan.md](plan.md), which implements [SPEC.md](SPEC.md).
 | 8 | §9 Live and sandbox | `validate/live.py`, `validate/sandbox.py` (new) | 8, 9 |
 | 9 | §11 Mock data, notebook harness, notebooks | `tests/mock_pool.py`, `tests/nb_harness.py`, `tests/test_notebooks.py` (new), `notebook/*.ipynb` | plan §5 |
 
-Order: 1 → 2 → (3, 4) → 5 → 6 → 7 → 8. `tests/mock_pool.py` is written with unit 1 and extended by each later unit, because every unit tests on it. The notebooks are edited after the units they call (plan §5.1). Sections 3 and 4 are independent. Every file stays under 500 lines. `build.py` and `history.py` are near 300 lines, so the lineage helpers go to a new `data/lineage.py` if either file would pass 450.
+Order: 1 → 2 → (3, 4) → 5 → 6 → 7 → 8. `tests/mock_pool.py` is written with unit 1 and extended by each later unit, because every unit tests on it. The notebooks are edited in steps N1–N6, each right after the unit it calls (plan §5.2); `tests/nb_harness.py` and `tests/test_notebooks.py` come with N1, after unit 4. Sections 3 and 4 are independent. Every file stays under 500 lines. `build.py` and `history.py` are near 300 lines, so the lineage helpers go to a new `data/lineage.py` if either file would pass 450.
 
 New CLIs, registered in `pyproject.toml` `[project.scripts]`: `label-check = "acise_p2_cidt.analysis.labels:main"`, `sandbox-report = "acise_p2_cidt.validate.sandbox:main"`.
 
@@ -42,7 +42,9 @@ REGISTRY: pathlib.Path
 class TargetConfig:
     target: Target
     enabled: bool
-    exclude_jobs: tuple[str, ...]  # regexes; a failed run whose failed jobs all match is infra
+    exclude_jobs: tuple[str, ...]  # regexes on "<job>" or "<job> :: <failed step>"
+
+    excludes(job: str | None, step: str | None) -> bool  # job None (no failed job) is infra
 
 load_targets(path: pathlib.Path = REGISTRY, enabled_only: bool = True) -> list[TargetConfig]
 find_target(slug: str, path: pathlib.Path = REGISTRY) -> TargetConfig  # enabled or not
@@ -146,7 +148,7 @@ New columns per run:
 ### 6.2 Drops (`runs_frame`)
 
 - An unsupported event goes to `dropped[f"event_{event}"]`, before the label is read.
-- `exclude_jobs`: a first-attempt failure whose failed job names **all** match some pattern (`re.search`) goes to `dropped["infra_failure"]`. A failure without job data (`failed_jobs is None`) is kept and counted in `dropped["no_jobs_kept"]`, a counter that drops nothing.
+- `exclude_jobs`: a first-attempt failure whose failed jobs **all** satisfy `cfg.excludes(name, failed_step)` goes to `dropped["infra_failure"]`. A pattern matches (`re.search`) the job name or `"<job> :: <failed step>"`, so a job that fails both for infra and for code reasons is split by step. A failure whose jobs file has no failed job (the run failed before it tested the code, mostly fork PRs) is also `infra_failure`. A failure without job data (`failed_jobs is None`) is kept and counted in `dropped["no_jobs_kept"]`, a counter that drops nothing.
 - `build(cfg: TargetConfig | Target, ...)`: a bare `Target` means `exclude_jobs = ()`, which keeps the old callers working.
 
 ### 6.3 Lineage-scoped history (`history_features`)
@@ -194,11 +196,12 @@ failed_jobs(cfg: TargetConfig) -> pd.DataFrame
     # one row per (run, failed job): run_id, event, job, failed_step (None if none), excluded (bool)
 summary(cfg: TargetConfig) -> dict
     # n_runs, runs_per_event, first-attempt failure rate, infra share, T2 failures,
-    # flaky rate, top jobs covering >= 80% of failures
+    # flaky rate, top jobs covering >= 80% of the failures left after exclusion
 main()  # CLI `label-check --target <slug> | --targets <path> [--all]`
 ```
 
 - It reads the raw cache only (`cached_runs`, `first_attempt`, `jobs/`), with no API calls.
+- The ranking lists only jobs not yet excluded, so the re-run after `exclude_jobs` shows what is left. A trailing ` [<uuid>]` (servo) is stripped from job names before grouping.
 - T2 failures come from the lineage rule of §6.1/§6.3 without git: group the supported-event runs by lineage, order by completion, and count failures whose lineage-previous run passed or does not exist.
 - The CLI prints the top-jobs table and the summary with the rich console. `--all` includes disabled targets (needed in phase 3, when all are disabled).
 
@@ -287,6 +290,6 @@ run_notebook(path: pathlib.Path, stubs: dict[str, Callable], skip_tags=("live",)
 
 ### 11.4 Editing notebooks
 
-- Cells are developed as plain code, run through `run_notebook` on a scratch copy, then written to the real notebook with `nbformat` (or the NotebookEdit tool), keeping the cell order of plan §5.2.
+- Cells are developed as plain code, run through `run_notebook` on a scratch copy, then written to the real notebook with `nbformat` (or the NotebookEdit tool), keeping the cell order of plan §5.3.
 - Edited code cells are saved with `outputs = []` and `execution_count = None`. Unchanged cells keep their outputs until the user re-runs.
 - Every cell keeps the notebook's style: imports in the setup cell, display through `display(...)`, figures through `plots.save(fig, "<notebook>_<name>")`, comments only for decisions.

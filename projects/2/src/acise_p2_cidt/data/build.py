@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime
@@ -83,6 +84,32 @@ def _salt(t: Target) -> bytes:
 
 def _ts(s: str | None) -> float:
     return datetime.fromisoformat(s).timestamp() if s else np.nan
+
+
+# merge-queue head branch: gh-readonly-queue/<base>/pr-<n>-<sha>
+_QUEUE = re.compile(r"^gh-readonly-queue/.+/pr-(\d+)-[0-9a-f]+$")
+
+
+def lineage(run: dict) -> str:
+    """
+    The run's lineage: the PR or branch whose previous run it follows.
+
+    Args:
+        run (dict): raw run object.
+
+    Returns:
+        str: `pr:<n>` for PR and merge-queue runs, `head:<repo>:<branch>` for a PR
+            without a PR number (fork PRs), `branch:<name>` for pushes and the rest.
+    """
+    event, branch = run["event"], run.get("head_branch") or ""
+    if event == "pull_request":
+        if prs := run.get("pull_requests"):
+            return f"pr:{prs[0]['number']}"
+        head = (run.get("head_repository") or {}).get("full_name", "")
+        return f"head:{head}:{branch}"
+    if event == "merge_group" and (m := _QUEUE.match(branch)):
+        return f"pr:{m[1]}"
+    return f"branch:{branch}"
 
 
 # =============================================================================

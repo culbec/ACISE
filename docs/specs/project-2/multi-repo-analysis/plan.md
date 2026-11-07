@@ -2,6 +2,8 @@
 
 Implements [SPEC.md](SPEC.md). Code-level details (modules, signatures, layout, tests) are in [implementation-backbone.md](implementation-backbone.md). The project-wide rules of the [main plan](../../../plans/projects/2/dt-ci-failure-prediction.md) and the [project backbone](../../../plans/projects/2/implementation-backbone.md) still apply: leakage boundary, portability rule, coding style, one module at a time on request. One exception for this feature: Claude edits the notebooks itself (§5).
 
+**Documentation rule.** Plan and backbone references (decision ids such as `P-D4`, phase or step numbers, `§` sections) and other planning remarks stay in the plan. They do not go into code, comments, docstrings, tests, or notebooks. The code and its short comments must document themselves: a comment states a non-obvious reason or constraint in plain terms, in one or two lines, never the history of a decision.
+
 **Testing rule.** Every driver change and every changed notebook cell is first tested offline on **mock data**: small synthetic run caches and per-target tables, generated in `tmp_path`. This keeps tests fast and independent of the API and the multi-hour builds. Real data only enters in phase 5 (operations) and when the user runs the notebooks.
 
 ## 1. Probe data (2026-11-07)
@@ -62,6 +64,12 @@ A 6-month window without openclaw costs about 10 h of API time. The full ~13 mon
 
 Each phase ends with its checks. A phase is not started before the previous one's checks pass, except where noted.
 
+Each driver phase is followed by its notebook step (N1–N6, §5.2), so the changed code can be run from the notebooks before the next phase starts. Order:
+
+1 → 2 → **N1** → 3 → **N2** → 4 → **N3** → 6 → **N4** → 5 → 7 (**N5**) → 8 → 9 → **N6**
+
+Phase 6 is code only (tested on mock data), so it runs **before** phase 5. Phase 5 then runs from the finished `collection.ipynb`, and its outputs feed the already-edited analysis notebooks.
+
 ### Phase 1 — Target registry and storage layout
 
 Tasks:
@@ -107,24 +115,24 @@ Pass criteria:
 - Estimated T2 failures in the window: ≥ 20 for the pool, ≥ 50 for E1/E3 (P-D5).
 - The flaky rate is reported. Above 50% of failures it is recorded as a risk, not a failure.
 
-Results (filled in by this phase; one row per candidate):
+Results (2026-11-08; sample 2026-10-08 to 2026-11-04). Est. T2 failures = T2 failures in the sample × 182.6 / 28 days. Infra = failures whose failed jobs all match `exclude_jobs`, plus failures without any failed job (the run failed before it tested the code). Patterns match `<job>` or `<job> :: <failed step>`:
 
 | Target | Workflow role | Top failed jobs (≥ 80%) | `exclude_jobs` | Infra share | Est. T2 failures | Flaky rate | Events | Verdict |
 |---|---|---|---|---|---|---|---|---|
-| n8n-io/n8n ci-pull-requests | | | | | | | | |
-| n8n-io/n8n ci-master | | | | | | | | |
-| astral-sh/ruff ci | | | | | | | | |
-| astral-sh/uv ci | | | | | | | | |
-| windmill-labs/windmill backend-check | | | | | | | | |
-| windmill-labs/windmill frontend-check | | | | | | | | |
-| sharkdp/fd CICD | | | | | | | | |
-| github/gh-aw ci | | | | | | | | |
-| Homebrew/brew tests | | | | | | | | |
-| openclaw/openclaw ci | | | | | | | | |
-| tokio-rs/tokio ci | | | | | | | | |
-| sveltejs/svelte ci | | | | | | | | |
-| nushell/nushell ci | | | | | | | | |
-| servo/servo main | | | | | | | | |
+| n8n-io/n8n ci-pull-requests | PR + merge-queue build, typecheck, unit/DB tests | Unit tests (fail-if-tests-failed), Typecheck (`Setup Node.js` runs `turbo typecheck`), DB integration, Install & Build, Format check | `^Required Checks$` | 5% | 9,254 | 9% | PR 82%, merge_group 17% | pass |
+| n8n-io/n8n ci-master | master push build + tests | Verify npm-install closure of changed packages (code: caused by the change), Unit tests (24.x) | — | 0% | 913 | 0% | push 100% | pass |
+| astral-sh/ruff ci | PR + main build, tests, lint | cargo test (macOS, linux, windows), cargo hawk, clippy | `^all required checks passed$`, `^security-review / security review$` | 26% | 1,793 | 12% | PR 51%, dispatch 42% (dropped), push 6% | pass |
+| astral-sh/uv ci | PR + main tests, lint, system tests | cargo test (windows ×3, linux, macOS), system Python tests, hawk, clippy | `^all required jobs passed$`, `^test uv publish$`, `^review / security review$` | 8% | 2,348 | 27% | PR 86%, push 13% | pass |
+| windmill-labs/windmill backend-check | push (all branches) cargo check | check_ee_full / check_ee `cargo check` | `^check_ee :: Run actions/checkout` (EE repo checkout; always fails with check_ee_full, so 0 runs dropped) | 0% | 672 | 0% | push 79%, workflow_run 21% (dropped) | pass |
+| windmill-labs/windmill frontend-check | push (all branches) npm check | npm_check | — | 1% | 293 | 0% | push 80%, workflow_run 20% (dropped) | pass |
+| sharkdp/fd CICD | PR + master tests, clippy, fmt per target | Run tests (per target), clippy, fmt | `^Publish to Winget$` | 8% | 59 | 0% | PR 76%, push 24% | pass (E1 borderline) |
+| github/gh-aw ci | main push tests and checks | guidance tests, integration tests, workflow lock drift | `^Validate latest release alignment$` | 14% | 333 | 0% | push 60%, schedule 40% (dropped) | pass; risk: 62% failure rate, T2 share 13% (main stays broken) |
+| Homebrew/brew tests | PR + merge-queue + main brew tests, audits | `brew tests` shards, formula audit | ` :: Install Subversion$`, ` :: Run brew test-bot --only-setup$` | 11% | 391 | 8% | PR 59%, merge_group 23%, push 19% | pass |
+| openclaw/openclaw ci | — | — | — | — | — | — | — | deferred (P-D2, not sampled) |
+| tokio-rs/tokio ci | PR + master tests, clippy, docs, FreeBSD, io_uring | FreeBSD tests, clippy, spellcheck, fmt, docs, minrust, io_uring QEMU tests | `^Test io_uring on Linux [\d.]+ / build :: Download & build Linux kernel$` | 21% | 411 | 10% | PR 81%, push 19% | pass |
+| sveltejs/svelte ci | PR + main lint, typecheck, tests | Lint (lint, type check), TestNoAsync, TSGo, Tests | — | 13% | 378 | 2% | PR 94%, push 6% | pass |
+| nushell/nushell ci | PR + main fmt, check, tests, fuzz | Linux/Windows Test, Check, fuzz Fmt | — | 29% (12 of 41: fork PRs without jobs) | 157 | 15% | PR 72%, push 28% | pass (infra near the limit) |
+| servo/servo main | PR + merge-queue + main build, lint, unit tests, WPT | Lint (Tidy, Clippy), Linux build, WPT, unit tests | `^Result$`, ` / Perf analysis`, ` / Mossel Scenario test`, ` / Benching HarmonyOS` | 17% | 3,469 | 0% | PR 55%, merge_group 29%, push 16% | pass |
 
 Checks:
 - Every row has a verdict, and `targets.json` has `enabled` and `exclude_jobs` set to match.
@@ -148,8 +156,10 @@ Checks:
 
 ### Phase 5 — Full collection and build (operations)
 
+Runs after phase 6 and N4 (see the order above).
+
 Tasks:
-1. `collect-runs --targets config/targets.json --since <C − window> --until <C>` for the enabled targets, on one collection day C. It can be resumed over several sessions; C is the `--until` value.
+1. `collect-runs --targets config/targets.json --since <C − window> --until <C>` for the enabled targets, on one collection day C. It can be resumed over several sessions; C is the `--until` value. Equivalent: run sections 1–2 of `collection.ipynb`.
 2. `build-dataset --targets config/targets.json`.
 
 Checks:
@@ -158,6 +168,8 @@ Checks:
 - Per target, the share of rows with NaN git features (unreachable heads) is ≤ 10%, or it is recorded as a risk.
 
 ### Phase 6 — Pooled loading and per-source reporting
+
+Runs before phase 5 (see the order above).
 
 Tasks (backbone §7):
 1. `load` accepts several target slugs, concatenates them, sorts by `created_at`, and records `source` per row.
@@ -169,7 +181,7 @@ Checks:
 
 ### Phase 7 — Experiments E1–E3
 
-Runs in the edited `feature_selection.ipynb` and `tree.ipynb` (§5). The user runs them on the real pool.
+Runs in `feature_selection.ipynb` and `tree.ipynb`. Their E1/E3 sections are notebook step N5 (§5.2), edited at the start of this phase. The user runs them on the real pool.
 
 Tasks:
 1. Feature selection on the pooled dev segment (same procedure as the main plan, D6/D7).
@@ -219,14 +231,31 @@ The notebooks in `projects/2/notebook/` analyse the pooled dataset, the list of 
 - **Network cells.** Cells that call the API or clone repositories (collect, build, retest, predict-run, the in-progress run) get the cell tag `live`. The harness replaces their driver calls with mock-data stubs, so the cells after them still run. A call that would reach the network without a stub fails the test.
 - **Shared setup.** Every notebook opens with the same constants cell: `SOURCES = [slug(c.target) for c in load_targets()]` (enabled targets) and `DATASET = pool_name(SOURCES)`. The data for that list is loaded once.
 - **n8n-specific content goes.** The Node 25.x regime (`REGIME`), n8n job categories, and observations written for n8n master no longer describe the data. Regime analysis becomes a per-source failure-rate view. `## Observations` cells become placeholders, filled in after the real run.
-- **When.** `collection.ipynb` after phases 2–4 (and 5 for the real run). `eda.ipynb`, `feature_selection.ipynb` and `tree.ipynb` after phase 6. `validation.ipynb` after phases 8–9.
+- **When.** In steps N1–N6 (§5.2), each right after the driver phase whose code it calls. A step edits only the sections listed for it; the other sections stay as they are until their step.
+- **Harness first.** `tests/nb_harness.py` and `tests/test_notebooks.py` (backbone §11) are written in N1. Each step extends `tests/mock_pool.py` with what its sections read, and adds its notebook's sections to `test_notebooks.py`. Until a notebook's last step, its test runs only the sections edited so far (the cells up to the last edited one).
 
-### 5.2 Per notebook
+### 5.2 Order
+
+Phases 1–2 removed `N8N_MASTER`, so every setup cell that imports it fails until its notebook's first step. Before phase 5 there are no built tables, so the analysis notebooks run on the user's machine only after phase 5. Until then they are checked on the mock pool.
+
+| Step | After | Notebook sections (§5.3) | What the user can run then |
+|---|---|---|---|
+| N1 | phase 2 | `collection.ipynb`: setup, 1. Collect (`live`), manifest table | collect the 28-day phase 3 sample from the notebook; manifest table per source |
+| N2 | phase 3 | `collection.ipynb`: new "Label check" section after 1: `labels.summary` per candidate (top jobs, infra share, T2 failures, flaky rate, events) | the phase 3 classification and its re-run after `exclude_jobs` |
+| N3 | phase 4 | `collection.ipynb`: 2. Build per source (`live`, schema table, `n_dropped`), and sections 3–6 **per source** (coverage, events and lineages, label balance, lineage streaks, flaky), each source read with `load(slug, ...)` | build the sample tables and inspect lineages, events, drops, T2 per target |
+| N4 | phase 6 | `collection.ipynb`: pooled `load(SOURCES, ...)` and the pooled side of sections 2–6. `eda.ipynb`: all. `feature_selection.ipynb`: setup, 1–8 except the per-source check. `tree.ipynb`: setup, 1–7, 9 (pooled and per-source rows) | after phase 5: the whole collection, EDA, pooled feature selection and CV |
+| N5 | start of phase 7 | `feature_selection.ipynb`: per-source check (E1 lists). `tree.ipynb`: 5. E2 vs E1 tests, 6. repository-proxy check, 8. E1 and E3 | E1–E3 on the real pool |
+| N6 | phase 9 | `validation.ipynb`: all, including 6. Sandbox | freeze, re-test, case studies, in-progress run, sandbox report |
+
+Phase 8 has no step of its own: `validation.ipynb` 1–4 and 6 are edited together in N6, once `sandbox.report` exists. If the user wants to freeze and re-test before the sandbox is ready, sections 1–4 move to a step after phase 8.
+
+### 5.3 Per notebook
 
 | Notebook | Section | Change |
 |---|---|---|
 | `collection.ipynb` | setup | `TARGET_REPO = N8N_MASTER` becomes `CONFIGS = load_targets()`, `SOURCES`, `COLLECTION_UNTIL` (C), `SINCE` = C − P-D1 window |
 | | 1. Collect | loop over `CONFIGS` (`live`). Manifest table, one row per source: runs, API calls, windows, largest window (assert < 1000), runs per event |
+| | new: label check | `labels.summary(cfg)` for every registry entry (`load_targets(enabled_only=False)`): one summary row per target, plus its top-jobs table |
 | | 2. Build | loop over `CONFIGS`, skipping built tables (`live`). Schema table per source: runs, failed, features, `n_dropped` per reason (`infra_failure`, `event_*`). Assert equal `feature_cols` across sources. Pooled `t1, t2 = load(SOURCES, ...)` |
 | | 3. Coverage | monthly runs and failure rate, pooled and per source (pivot table, plus `px.line` with one line per source). The pooled `runs_per_week` keeps the dev-end line. The n8n regime cells are replaced by "per-source failure-rate shifts" (the months where a source's rate moves more than 2× its median) |
 | | new: events and lineages | runs and failure rate per event, per source; runs per lineage (distribution); share of first-of-lineage runs; fork share |
@@ -262,11 +291,11 @@ The notebooks in `projects/2/notebook/` analyse the pooled dataset, the list of 
 | | 4. In-progress run | first source with a run in progress; no `branch`/`event` filter for all-branch targets (`live`) |
 | | new: 6. Sandbox (E4) | `sandbox.report(predictions.jsonl)`: confusion matrix, MCC, Parrot and majority, per-scenario table, imputed features |
 
-### 5.3 Checks
+### 5.4 Checks
 
 - `test_notebooks.py` (backbone §11) runs every notebook top to bottom on the mock pool, with `live` cells stubbed, and passes.
 - No notebook still references `N8N_MASTER`, `REPO`, or `REGIME` (grep check).
-- Every pooled table or figure has its per-source counterpart, listed in §5.2.
+- Every pooled table or figure has its per-source counterpart, listed in §5.3.
 
 ## 6. Risks
 

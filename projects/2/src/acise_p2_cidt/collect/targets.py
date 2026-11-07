@@ -38,9 +38,19 @@ def slug(t: Target) -> str:
 class TargetConfig:
     target: Target
     enabled: bool
-    exclude_jobs: tuple[
-        str, ...
-    ]  # regexes; a failed run whose failed jobs all match is infra
+    # regexes on "<job>" or "<job> :: <failed step>"; a failed run whose failed
+    # jobs all match is infra
+    exclude_jobs: tuple[str, ...]
+
+    def excludes(self, job: str | None, step: str | None) -> bool:
+        """
+        Whether a failed job is infrastructure. `job` None stands for a failed run
+        without any failed job: it failed before testing the code, so it is infra.
+        """
+        if job is None:
+            return True
+        key = f"{job} :: {step}"
+        return any(re.search(p, job) or re.search(p, key) for p in self.exclude_jobs)
 
 
 def _parse(i: int, e: object) -> TargetConfig:
@@ -80,18 +90,20 @@ def _parse(i: int, e: object) -> TargetConfig:
 
 
 def load_targets(
-    path: pathlib.Path = REGISTRY, enabled_only: bool = True
+    path: pathlib.Path | None = None, enabled_only: bool = True
 ) -> list[TargetConfig]:
     """
     Reads and validates the target registry.
 
     Args:
-        path (pathlib.Path): JSON list of targets.
+        path (pathlib.Path | None): JSON list of targets; None = `REGISTRY`, read
+            at call time so tests can patch it.
         enabled_only (bool): drop entries with `enabled: false`.
 
     Returns:
         list[TargetConfig]: entries in file order.
     """
+    path = path or REGISTRY
     entries = json.loads(path.read_text())
     if not isinstance(entries, list):
         raise ValueError(f"{path}: the top level must be a list")  # noqa: TRY004
@@ -109,13 +121,13 @@ def load_targets(
     return [c for c in cfgs if c.enabled or not enabled_only]
 
 
-def find_target(slug_: str, path: pathlib.Path = REGISTRY) -> TargetConfig:
+def find_target(slug_: str, path: pathlib.Path | None = None) -> TargetConfig:
     """
     The registry entry with this slug, enabled or not.
 
     Args:
         slug_ (str): target slug.
-        path (pathlib.Path): registry file.
+        path (pathlib.Path | None): registry file; None = `REGISTRY`.
 
     Returns:
         TargetConfig: the entry.
@@ -123,7 +135,7 @@ def find_target(slug_: str, path: pathlib.Path = REGISTRY) -> TargetConfig:
     for c in load_targets(path, enabled_only=False):
         if slug(c.target) == slug_:
             return c
-    raise ValueError(f"no target {slug_!r} in {path}")
+    raise ValueError(f"no target {slug_!r} in {path or REGISTRY}")
 
 
 # =============================================================================
@@ -144,7 +156,7 @@ def add_target_args(p: argparse.ArgumentParser) -> None:
 def targets_from_args(a: argparse.Namespace) -> list[TargetConfig]:
     """The targets named by `add_target_args` options."""
     if a.target:
-        return [find_target(a.target, REGISTRY)]
+        return [find_target(a.target)]
     if a.targets:
         return load_targets(a.targets)
     if a.repo and a.workflow:

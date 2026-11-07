@@ -207,3 +207,19 @@ def test_build_end_to_end(raw):
     assert load.available_targets() == [slug(T)]
     ds = load.load(slug(T), "T1")
     assert list(ds.X.columns) == schema["feature_cols"] and out.exists()
+
+
+@pytest.mark.parametrize(
+    ("run", "expected"),
+    [
+        ({"event": "push", "head_branch": "main"}, "branch:main"),
+        ({"event": "pull_request", "head_branch": "fix",
+          "pull_requests": [{"number": 7}]}, "pr:7"),
+        ({"event": "pull_request", "head_branch": "fix", "pull_requests": [],
+          "head_repository": {"full_name": "someone/app"}}, "head:someone/app:fix"),
+        ({"event": "merge_group",
+          "head_branch": "gh-readonly-queue/main/pr-7-0123abcd"}, "pr:7"),
+    ],
+)  # fmt: skip
+def test_lineage(run, expected):
+    assert build.lineage(run) == expected
