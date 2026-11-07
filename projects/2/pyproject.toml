@@ -1,6 +1,6 @@
 [project]
 name = "acise-p2-cidt"
-version = "0.1.0"
+version = "0.1.10"
 description = "ACISE Project 2: CI Build Failure Prediction using DT"
 authors = [
     { name = "culbec", email = "profir.alexx@gmail.com" }
