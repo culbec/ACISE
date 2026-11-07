@@ -13,12 +13,8 @@ import skops.io as sio
 from acise_p2_cidt.analysis.features import load_features
 from acise_p2_cidt.collect import git_changes as git
 from acise_p2_cidt.collect import http
-from acise_p2_cidt.collect.gh_runs import (
-    N8N_MASTER,
-    Target,
-    fetch_details,
-    fetch_windows,
-)
+from acise_p2_cidt.collect.gh_runs import fetch_details, fetch_windows
+from acise_p2_cidt.collect.targets import Target
 from acise_p2_cidt.data.build import build
 from acise_p2_cidt.data.load import LABEL_COL, PREV_LABEL_COL, load
 from acise_p2_cidt.data.load import Target as Label
@@ -70,9 +66,9 @@ def _code_version() -> str:
     ).stdout.strip()
 
 
-def model_path(repo: str, target: Label, model: Model) -> pathlib.Path:
-    """`results/model/<model>_<owner>__<name>_<target>.skops`."""
-    return MODEL_DIR / f"{model}_{repo.replace('/', '__')}_{target}.skops"
+def model_path(dataset: str, target: Label, model: Model) -> pathlib.Path:
+    """`results/model/<model>_<dataset>_<target>.skops`."""
+    return MODEL_DIR / f"{model}_{dataset}_{target}.skops"
 
 
 def save_model(
@@ -125,7 +121,7 @@ def load_model(path: pathlib.Path) -> tuple[CART | RandomForest, dict]:
 
 
 def train_final(
-    repo: str,
+    dataset: str,
     target: Label,
     model: Model = "cart",
     params: dict | None = None,
@@ -138,7 +134,7 @@ def train_final(
     on the last `VAL_FRAC` rows, no refit, so both stay matched to the saved model.
 
     Args:
-        repo (str): "owner/name".
+        dataset (str): target slug.
         target (Label): "T1" or "T2".
         model (Model): "cart" or "forest".
         params (dict | None): fixed model parameters; None runs the grid search.
@@ -149,8 +145,8 @@ def train_final(
     """
     if model not in ("cart", "forest"):
         raise ValueError(f"model must be 'cart' or 'forest', got {model!r}")
-    features = features or load_features(target, repo)
-    ds = load(repo, target)
+    features = features or load_features(target, dataset)
+    ds = load(dataset, target)
     n = len(ds.y)
     cut = n - int(n * VAL_FRAC)
     split = prepare(ds, features, Fold(-1, np.arange(cut), np.arange(cut, n),
@@ -159,7 +155,8 @@ def train_final(
     payload = fit_predict(split, params).payload
     est, choice = payload["tree" if model == "cart" else "forest"], payload["choice"]
     sidecar = {
-        "repo": repo,
+        "dataset": dataset,
+        "repo": ds.meta.get("repo"),
         "workflow_id": ds.meta.get("workflow_id"),
         "branch": ds.meta.get("branch"),
         "target": target,
@@ -181,7 +178,7 @@ def train_final(
         "code_version": _code_version(),
     }
     logger.info(f"{model} {target}: {choice.params}, val mcc {choice.val_mcc:.3f}")
-    return save_model(est, model_path(repo, target, model), sidecar)
+    return save_model(est, model_path(dataset, target, model), sidecar)
 
 
 # =============================================================================
@@ -328,12 +325,12 @@ def predict_run(path: pathlib.Path, ref: str) -> dict:
 
 def train_final_main() -> None:
     p = argparse.ArgumentParser(description="Fit and save the frozen model.")
-    p.add_argument("--repo", default=N8N_MASTER.repo)
+    p.add_argument("--dataset", required=True, help="target slug")
     p.add_argument("--target", choices=["T1", "T2"], default="T2")
     p.add_argument("--model", choices=["cart", "forest"], default="cart")
     p.add_argument("--params", type=json.loads, help="JSON; omit to grid-search")
     a = p.parse_args()
-    log.print(f"saved {train_final(a.repo, a.target, a.model, a.params)}")
+    log.print(f"saved {train_final(a.dataset, a.target, a.model, a.params)}")
 
 
 def retest_main() -> None:
@@ -345,9 +342,7 @@ def retest_main() -> None:
 def predict_run_main() -> None:
     p = argparse.ArgumentParser(description="Explain the prediction for one run.")
     p.add_argument("ref", help="run id or commit SHA")
-    p.add_argument(
-        "--model", type=pathlib.Path, default=model_path(N8N_MASTER.repo, "T2", "cart")
-    )
+    p.add_argument("--model", type=pathlib.Path, required=True, help=".skops file")
     a = p.parse_args()
     r = predict_run(a.model, a.ref)
     label = {None: "running", 0: "passed", 1: "failed"}[r["label"]]

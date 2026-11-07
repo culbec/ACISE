@@ -54,7 +54,9 @@ def trained(tmp_path, monkeypatch):
         return (df if select is None else df[select(df)]), {}
 
     monkeypatch.setattr(live, "build", fake_build)
-    path = live.train_final("o/r", "T1", "cart", {"max_depth": 3}, ["f0", "f1"])
+    path = live.train_final(
+        "o__r__1@main", "T1", "cart", {"max_depth": 3}, ["f0", "f1"]
+    )
     return path, df
 
 
@@ -107,6 +109,8 @@ def test_train_final_sidecar(trained):
                                           tz="UTC").isoformat()  # fmt: skip
     assert side["medians"]["f1"] == pytest.approx(df["f1"].iloc[:240].median())
     assert side["features"] == ["f0", "f1"]
+    assert path.name == "cart_o__r__1@main_T1.skops"
+    assert (side["dataset"], side["repo"]) == ("o__r__1@main", "o/r")
 
 
 def test_retest_scores_only_rows_after_cutoff(trained):

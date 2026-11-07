@@ -7,7 +7,7 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
-from acise_p2_cidt.collect.gh_runs import RAW_ROOT
+from acise_p2_cidt.collect.gh_runs import repo_root
 from acise_p2_cidt.utils.logging.log import get_logger
 
 FileKind = Literal["src", "test", "config", "doc", "ci"]
@@ -76,7 +76,7 @@ def clone(repo: str, branch: str) -> pathlib.Path:
     Returns:
         pathlib.Path: the bare repository.
     """
-    dest = RAW_ROOT / repo.replace("/", "__") / "repo.git"
+    dest = repo_root(repo) / "repo.git"
     if dest.exists():
         _git(dest, "fetch", "origin", f"+{branch}:{branch}")
     else:

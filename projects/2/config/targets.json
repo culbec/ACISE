@@ -1,0 +1,16 @@
+[
+  {"repo": "n8n-io/n8n", "workflow_id": 33322401, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "n8n-io/n8n", "workflow_id": 33323319, "branch": "master", "enabled": false, "exclude_jobs": []},
+  {"repo": "astral-sh/ruff", "workflow_id": 32130301, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "astral-sh/uv", "workflow_id": 82881044, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "windmill-labs/windmill", "workflow_id": 133951533, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "windmill-labs/windmill", "workflow_id": 45664283, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "sharkdp/fd", "workflow_id": 11202521, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "github/gh-aw", "workflow_id": 180858647, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "Homebrew/brew", "workflow_id": 9591, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "openclaw/openclaw", "workflow_id": 209874334, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "tokio-rs/tokio", "workflow_id": 1972898, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "sveltejs/svelte", "workflow_id": 14783, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "nushell/nushell", "workflow_id": 7519865, "branch": null, "enabled": false, "exclude_jobs": []},
+  {"repo": "servo/servo", "workflow_id": 3876879, "branch": null, "enabled": false, "exclude_jobs": []}
+]

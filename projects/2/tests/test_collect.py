@@ -149,3 +149,12 @@ def test_rate_limit_sleeps_until_reset(monkeypatch):
     monkeypatch.setattr(http, "_session", lambda: session)
     assert http.get("/x") == {"x": 1}
     assert slept == [pytest.approx(3.0)]  # 2 s to reset + 1 s margin
+
+
+def test_layout_two_targets_of_one_repo(tmp_path, monkeypatch):
+    monkeypatch.setattr(gh_runs, "RAW_ROOT", tmp_path)
+    a, b = Target("o/r", 1, "release/1.x"), Target("o/r", 2)
+    assert gh_runs.raw_dir(a) == tmp_path / "o__r" / "o__r__1@release~1.x"
+    assert gh_runs.raw_dir(b) == tmp_path / "o__r" / "o__r__2"  # all branches
+    # one clone and salt per repository, shared by its targets
+    assert gh_runs.repo_root(a.repo) == gh_runs.raw_dir(b).parent == tmp_path / "o__r"

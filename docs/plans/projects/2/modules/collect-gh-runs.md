@@ -2,6 +2,8 @@
 
 Status: done (step 1). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_collect.py`.
 
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §2 registry, §3 identity and layout (done, phase 1: `Target.branch` optional, `slug`, `repo_root`, cache at `data/raw/<owner>__<name>/<slug>/`, manifest by slug, no `N8N_MASTER`, `--target`/`--targets` CLI), §4 collector (phase 2). Where the two differ, the multi-repo backbone wins.
+
 ## Purpose
 
 Fetch everything the dataset needs from the GitHub REST API and cache it on disk, so collection can stop and resume, and so the build step never touches the network. One workflow only: pull requests and the PR workflow are out of scope.

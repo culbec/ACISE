@@ -115,9 +115,9 @@ Each must pass the label check (plan, phase 3) before it is enabled.
 
 1. Every candidate has a label-check verdict before any training on the pooled data.
 2. Collection of an enabled target holds runs from more than one branch and event when the workflow runs on them, with no gap caused by API caps.
-3. Two targets of the same repository can be collected and built side by side. Data of the current single-branch target is still usable.
+3. Two targets of the same repository can be collected and built side by side.
 4. A run that failed only in infrastructure jobs is excluded and counted. A run with one code failure is kept as a failure.
-5. On a single-branch target, the rebuilt dataset matches today's on every existing column; only the new columns are added.
+5. On a single-branch target, the lineage-aware build gives the same history features as the single-lineage build (checked on synthetic data); only the new columns are added.
 6. The pooled dataset is in global creation order, every row has a source, and mismatched tables are refused.
 7. E1 to E3 are reported per source and pooled, with baselines. E4 is reported with its scenario breakdown.
 8. Existing behaviour and tests keep working, except where this spec changes a definition on purpose (plan, decisions).

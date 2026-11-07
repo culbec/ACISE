@@ -1,6 +1,8 @@
 # `data/load.py`
 
-Status: todo (step 4). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_load.py`.
+Status: done (step 4). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_load.py`.
+
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §3 layout (done, phase 1: `load(slug)`, `table_path(slug)`, `schema_path(slug)`, `available_targets()`, `meta["dataset"]`), §6.5 T2 rule P-D4 (phase 4), §7 pooled load (phase 6). Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 

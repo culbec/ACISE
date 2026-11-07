@@ -51,7 +51,7 @@ class Selection:
             pathlib.Path: JSON file path.
         """
         out_dir.mkdir(parents=True, exist_ok=True)
-        path = out_dir / _file_name(self.meta["target"], self.meta["repo"])
+        path = out_dir / _file_name(self.meta["target"], self.meta["dataset"])
         path.write_text(
             json.dumps(
                 {
@@ -70,24 +70,25 @@ class Selection:
         return path
 
 
-def _file_name(target: str, repo: str) -> str:
-    """`owner/name` -> `owner__name`, as in data/processed, so the name is a file."""
-    return f"selected_features_{target}_{repo.replace('/', '__')}.json"
+def _file_name(target: str, dataset: str) -> str:
+    return f"selected_features_{target}_{dataset}.json"
 
 
-def load_features(target: str, repo: str, out_dir: pathlib.Path = OUT_DIR) -> list[str]:
+def load_features(
+    target: str, dataset: str, out_dir: pathlib.Path = OUT_DIR
+) -> list[str]:
     """
     Reads the frozen feature list written by `Selection.save`.
 
     Args:
         target (str): "T1" or "T2".
-        repo (str): repository, `owner/name`.
+        dataset (str): `Dataset.meta["dataset"]`, e.g. a target slug.
         out_dir (pathlib.Path): directory holding the JSON files.
 
     Returns:
         list[str]: selected features, ordered by relevance; N = its length.
     """
-    return json.loads((out_dir / _file_name(target, repo)).read_text())["features"]
+    return json.loads((out_dir / _file_name(target, dataset)).read_text())["features"]
 
 
 def _without_nominal(ds: Dataset, idx) -> pd.DataFrame:
@@ -404,7 +405,7 @@ def select_features(
         disagreements=disagreements,
         meta={
             "target": ds.meta["target"],
-            "repo": ds.meta["repo"],
+            "dataset": ds.meta["dataset"],
             "dev_rows": len(X),
             "dev_failed": int(y.sum()),
             "excluded": list(exclude),

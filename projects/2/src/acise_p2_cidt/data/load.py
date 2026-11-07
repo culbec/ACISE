@@ -29,40 +29,36 @@ class Dataset:
     X: pd.DataFrame  # feature columns only, chronological, RangeIndex
     y: pd.Series  # failed = 1, passed = 0
     dev_mask: np.ndarray  # True on the first DEV_FRACTION of rows
-    meta: dict  # schema.json content + target, n_rows, n_failed, n_dev
+    meta: dict  # schema.json content + dataset, target, n_rows, n_failed, n_dev
     order: pd.Series  # created_at per row, for plots and the retest cut
 
 
-def _slug(repo: str) -> str:
-    return repo.replace("/", "__")
+def table_path(slug: str) -> pathlib.Path:
+    """`data/processed/<slug>.csv`, written by `build-dataset`."""
+    return PROCESSED_DIR / f"{slug}.csv"
 
 
-def table_path(repo: str) -> pathlib.Path:
-    """`data/processed/<owner>__<name>.csv`, written by `build-dataset`."""
-    return PROCESSED_DIR / f"{_slug(repo)}.csv"
+def schema_path(slug: str) -> pathlib.Path:
+    """`results/collection/schema_<slug>.json`, written by `build-dataset`."""
+    return SCHEMA_DIR / f"schema_{slug}.json"
 
 
-def schema_path(repo: str) -> pathlib.Path:
-    """`results/collection/schema_<owner>__<name>.json`, written by `build-dataset`."""
-    return SCHEMA_DIR / f"schema_{_slug(repo)}.json"
-
-
-def available_repos() -> list[str]:
+def available_targets() -> list[str]:
     """
-    Repositories with a built table, as "owner/name".
+    Targets with a built table.
 
     Returns:
-        list[str]: sorted repository names.
+        list[str]: sorted target slugs.
     """
-    return sorted(p.stem.replace("__", "/", 1) for p in PROCESSED_DIR.glob("*.csv"))
+    return sorted(p.stem for p in PROCESSED_DIR.glob("*.csv"))
 
 
-def load(repo: str, target: Target, until: datetime | None = None) -> Dataset:
+def load(slug: str, target: Target, until: datetime | None = None) -> Dataset:
     """
     Loads a built table as a `Dataset`. Stateless: nothing is fitted here.
 
     Args:
-        repo (str): "owner/name".
+        slug (str): target slug, e.g. "n8n-io__n8n__33323319@master".
         target (Target): T1 = all runs; T2 = runs whose previous run passed.
         until (datetime | None): keep runs created at or before it (naive = UTC);
             None keeps all.
@@ -72,10 +68,10 @@ def load(repo: str, target: Target, until: datetime | None = None) -> Dataset:
     """
     if target not in ("T1", "T2"):
         raise ValueError(f"target must be 'T1' or 'T2', got {target!r}")
-    path, sp = table_path(repo), schema_path(repo)
+    path, sp = table_path(slug), schema_path(slug)
     if not path.is_file() or not sp.is_file():
         raise FileNotFoundError(
-            f"no built table for {repo!r} ({path}); run `build-dataset --repo {repo}`"
+            f"no built table for {slug!r} ({path}); run `build-dataset --target {slug}`"
         )
     schema = json.loads(sp.read_text())
     df = pd.read_csv(path)
@@ -95,6 +91,7 @@ def load(repo: str, target: Target, until: datetime | None = None) -> Dataset:
     n_dev = int(len(df) * DEV_FRACTION)  # cut after the T2 filter, as in project 1
     y = df[LABEL_COL].astype(int).rename("failed")
     meta = schema | {
+        "dataset": slug,  # file key of artefacts derived from this data
         "target": target,
         "n_rows": len(df),
         "n_failed": int(y.sum()),

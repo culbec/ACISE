@@ -144,11 +144,12 @@ def test_pruning_path_matches_sklearn(seed, criterion, class_weight, max_depth, 
 
 
 @pytest.mark.skipif(
-    not load.table_path("n8n-io/n8n").is_file(), reason="built n8n table not present"
+    not load.table_path("n8n-io__n8n__33323319@master").is_file(),
+    reason="built n8n table not present",
 )
 @pytest.mark.parametrize("criterion", ["gini", "entropy"])
 def test_real_slice_matches_sklearn_up_to_ties(criterion):
-    ds = load.load("n8n-io/n8n", "T2")
+    ds = load.load("n8n-io__n8n__33323319@master", "T2")
     sel = load.SCHEMA_DIR.parent / "features" / "selected_features_T2_n8n-io__n8n.json"
     X = ds.X[json.loads(sel.read_text())["features"]].iloc[:2000]
     X = X.fillna(X.median()).to_numpy().astype(np.float32).astype(np.float64)

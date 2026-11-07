@@ -27,7 +27,7 @@ def synthetic(n=600, seed=0):
         X=X,
         y=y,
         dev_mask=np.ones(n, bool),
-        meta={"target": "T2", "repo": "owner/name", "nominal": ["day_of_week"]},
+        meta={"target": "T2", "dataset": "owner__name__1", "nominal": ["day_of_week"]},
         order=pd.Series(pd.date_range("2026-01-01", periods=n, freq="h")),
     )
 
@@ -48,8 +48,8 @@ def test_select_features():
 def test_save_and_load(tmp_path):
     s = select_features(synthetic(), n_max=4, n_boot=2)
     path = s.save(tmp_path)
-    assert path.name == "selected_features_T2_owner__name.json"  # '/' not in a name
-    assert load_features("T2", "owner/name", tmp_path) == s.features
+    assert path.name == "selected_features_T2_owner__name__1.json"
+    assert load_features("T2", "owner__name__1", tmp_path) == s.features
 
 
 def test_deterministic():

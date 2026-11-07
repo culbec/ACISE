@@ -1,6 +1,8 @@
 # `data/build.py`
 
-Status: todo (step 3). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_build.py`.
+Status: done (step 3). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_build.py`.
+
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §3 layout (done, phase 1: table, schema and salt keyed by slug / repository root, `--target`/`--targets` CLI), §6 events, lineages, drops, lineage-scoped history, PR change features (phase 4). Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 

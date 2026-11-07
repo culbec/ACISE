@@ -12,13 +12,18 @@ import pandas as pd
 
 from acise_p2_cidt.collect import git_changes as git
 from acise_p2_cidt.collect.gh_runs import (
-    N8N_MASTER,
     RESULTS_DIR,
-    Target,
     cached_runs,
     first_attempt,
     raw_dir,
     read_json,
+    repo_root,
+)
+from acise_p2_cidt.collect.targets import (
+    Target,
+    add_target_args,
+    slug,
+    targets_from_args,
 )
 from acise_p2_cidt.data.history import git_features, history_features
 from acise_p2_cidt.data.load import (
@@ -67,8 +72,9 @@ def hash_id(value: str, salt: bytes) -> str:
 
 
 def _salt(t: Target) -> bytes:
-    # Lives in data/raw (git-ignored), never next to the results.
-    p = raw_dir(t) / "salt.bin"
+    # Lives in data/raw (git-ignored), never next to the results. One per
+    # repository, so an author gets the same id in every target of it.
+    p = repo_root(t.repo) / "salt.bin"
     if not p.exists():
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(os.urandom(16))
@@ -205,7 +211,7 @@ def build(
         raise FileNotFoundError(
             f"no runs cached for {t.repo}; run `collect-runs` first"
         )
-    repo_dir = raw_dir(t) / "repo.git"
+    repo_dir = repo_root(t.repo) / "repo.git"
     if not repo_dir.exists():
         repo_dir = git.clone(t.repo, t.branch)
     log_df = git.commit_log(repo_dir, t.branch)
@@ -254,26 +260,22 @@ def build(
     return df, schema
 
 
-def _slug(t: Target) -> str:
-    return t.repo.replace("/", "__")
-
-
 def _manifest(t: Target) -> pathlib.Path:
-    return RESULTS_DIR / f"manifest_{_slug(t)}.json"
+    return RESULTS_DIR / f"manifest_{slug(t)}.json"
 
 
 def write(df: pd.DataFrame, schema: dict, t: Target) -> pathlib.Path:
     """
-    Writes the table to `data/processed/<owner>__<name>.csv` and the schema to
+    Writes the table to `data/processed/<slug>.csv` and the schema to
     `results/collection/`.
 
     Returns:
         pathlib.Path: the CSV.
     """
-    out = table_path(t.repo)
+    out = table_path(slug(t))
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out, index=False)
-    sp = schema_path(t.repo)
+    sp = schema_path(slug(t))
     sp.parent.mkdir(parents=True, exist_ok=True)
     sp.write_text(json.dumps(schema, indent=2))
     return out
@@ -281,17 +283,14 @@ def write(df: pd.DataFrame, schema: dict, t: Target) -> pathlib.Path:
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Build the per-run feature table.")
-    p.add_argument("--repo", default=N8N_MASTER.repo)
-    p.add_argument("--workflow", type=int, default=N8N_MASTER.workflow_id)
-    p.add_argument("--branch", default=N8N_MASTER.branch)
-    a = p.parse_args()
-    t = Target(a.repo, a.workflow, a.branch)
-    df, schema = build(t)
-    out = write(df, schema, t)
-    log.print(
-        f"{out}: {schema['n_runs']} runs, {schema['n_failed']} failed, "
-        f"{len(schema['feature_cols'])} features, dropped {schema['n_dropped']}"
-    )
+    add_target_args(p)
+    for cfg in targets_from_args(p.parse_args()):
+        df, schema = build(cfg.target)
+        out = write(df, schema, cfg.target)
+        log.print(
+            f"{out}: {schema['n_runs']} runs, {schema['n_failed']} failed, "
+            f"{len(schema['feature_cols'])} features, dropped {schema['n_dropped']}"
+        )
 
 
 if __name__ == "__main__":

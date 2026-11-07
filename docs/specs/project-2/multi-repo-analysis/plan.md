@@ -10,7 +10,7 @@ Counts come from the Actions API `total_count` with no branch filter. 2,500 is t
 
 | Target | Id | Triggers (`on:`) | Oct 2026 runs | Failures | push / PR / merge_group | Notes |
 |---|---|---|---|---|---|---|
-| n8n-io/n8n `ci-pull-requests.yml` | 33322401 | pull_request, merge_group | ≈ 12,500 (≥ 2,900 a week) | ≈ 20% | 0 / 2,286 / 614 a week | no push runs; the master pushes are in `ci-master.yml` (33323319, already cached) |
+| n8n-io/n8n `ci-pull-requests.yml` | 33322401 | pull_request, merge_group | ≈ 12,500 (≥ 2,900 a week) | ≈ 20% | 0 / 2,286 / 614 a week | no push runs; the master pushes are in `ci-master.yml` (33323319) |
 | astral-sh/ruff `ci.yaml` | 32130301 | push [main], pull_request | ≈ 2,800 | ≈ 16% | 67 / 590 / 0 a week | |
 | astral-sh/uv `ci.yml` | 82881044 | push [main], pull_request | ≈ 5,700 | ≈ 15% | 163 / 1,162 / 0 a week | one sampled main failure was `test uv publish` (infra) |
 | windmill-labs/windmill `backend-check.yml` | 133951533 | push (all branches) | ≈ 3,200 | ≈ 9% | 579 / 0 / 0 a week | feature branches arrive as pushes |
@@ -46,7 +46,7 @@ A 6-month window without openclaw costs about 10 h of API time. The full ~13 mon
 |---|---|---|
 | P-D1 | Collection window: the last **6 months** before C, the same for all targets | fits the budget (≈ 10 h of API time); the same span for all targets keeps the dev segment mixed |
 | P-D2 | openclaw is **disabled** in the first pool. A changed target list later is a **new pool**, run as a separate experiment | 1.6 times all the other targets together; it would dominate the pool and the budget. Pool artefacts are named by their source list (backbone §3.2), so a second pool never overwrites the first |
-| P-D3 | add n8n `ci-master.yml` (33323319) as a second n8n target | already cached; adds the post-merge runs that `ci-pull-requests.yml` lacks |
+| P-D3 | add n8n `ci-master.yml` (33323319) as a second n8n target | adds the post-merge runs that `ci-pull-requests.yml` lacks |
 | P-D4 | T2 = runs whose previous run **in the same lineage** passed, **or** that are the first run of their lineage | see below |
 | P-D5 | Small targets: pool-eligible with ≥ 20 T2 failures in the window; E1/E3-eligible with ≥ 50 | small targets with clean labels still add failures to the pool |
 | P-D6 | Failures that do not come from the code (infra-only) are dropped, not relabelled (FR5). They are also absent from the history of later runs | they are noise: no pre-run feature can predict them, and their code outcome is unknown |
@@ -67,11 +67,9 @@ Each phase ends with its checks. A phase is not started before the previous one'
 Tasks:
 1. Add `projects/2/config/targets.json` with every candidate, all `enabled: false` (backbone §2).
 2. Key the raw cache, datasets, manifests, schemas and models by **target slug** (repository + workflow + optional branch), not by repository (backbone §3).
-3. Migrate the existing n8n `ci-master` cache and artefacts to the new layout, with no re-fetch (backbone §3.3).
 
 Checks:
 - Registry validation tests pass (backbone §10, `test_targets.py`).
-- After the migration, `build-dataset` on the legacy target produces a CSV identical to the pre-migration one (`diff` on the files).
 - The full test suite passes.
 
 ### Phase 2 — Collector: all branches, all supported events
@@ -146,7 +144,6 @@ Checks:
 - New `test_history.py` cases: two interleaved lineages, where `prev_failed` follows its own lineage; the first run of a lineage gets NaN and `lineage_first_run = 1`; `sha_prior_failed` only reads completed runs.
 - `test_build.py`: a failed run whose failed jobs all match `exclude_jobs` is dropped and counted; one with a non-matching failed job is kept.
 - `test_git_changes.py`: `merge_base` on a tiny repository with a branch; change features of a PR head equal the branch's total diff.
-- **Regression:** rebuilding the legacy single-branch target gives the same CSV as phase 1, except the new columns (all `event_push = 1`, `lineage_first_run` = 1 on the first row only).
 - The full test suite passes.
 
 ### Phase 5 — Full collection and build (operations)

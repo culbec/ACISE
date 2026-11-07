@@ -65,8 +65,6 @@ class Target(NamedTuple):
     workflow_id: int
     branch: str | None = None # None = all branches
 
-N8N_MASTER = Target("n8n-io/n8n", 33323319, "master")  # unchanged CLI default
-
 slug(t: Target) -> str        # "n8n-io__n8n__33323319@master", "astral-sh__uv__82881044"
 ```
 
@@ -78,11 +76,11 @@ slug(t: Target) -> str        # "n8n-io__n8n__33323319@master", "astral-sh__uv__
 |---|---|---|
 | `data/raw/<owner>__<name>/repo.git` | repository | one clone shared by all targets of the repository |
 | `data/raw/<owner>__<name>/salt.bin` | repository | shared, so one author gets one id across the repository's targets |
-| `data/raw/<owner>__<name>/wf-<id>[@<branch>]/{runs,attempts,jobs}/` | target | API cache, as today |
+| `data/raw/<owner>__<name>/<slug>/{runs,attempts,jobs}/` | target | API cache |
 | `data/processed/<slug>.csv` | target | built table |
-| `results/collection/{manifest,schema}_<slug>.json` | target | as today |
+| `results/collection/{manifest,schema}_<slug>.json` | target | collection manifest, build schema |
 | `results/features/selected_features_<T>_<dataset>.json` | dataset | `dataset` = a slug, or `pool-<hash>` for a pool |
-| `results/model/<model>_<dataset>_<T>.skops` | dataset | as today |
+| `results/model/<model>_<dataset>_<T>.skops` | dataset | final model + `.json` sidecar |
 
 Pool name (P-D2): `pool_name(slugs: list[str]) -> str` = `"pool-" + sha256("\n".join(sorted(slugs)))[:8]`, in `data/load.py`. A changed target list gives a new name, so the artefacts of an earlier pool are never overwritten. The full slug list is stored next to every pool artefact (`meta["sources"]`, the feature-list JSON, the model sidecar).
 
@@ -91,21 +89,7 @@ Functions:
 - `load`: `table_path(slug)`, `schema_path(slug)`, `available_targets() -> list[str]` (slugs), replacing `available_repos`.
 - `features`: `load_features` / `_file_name` take `dataset: str` instead of `repo`.
 - `live`: `model_path(dataset, target, model)`.
-- CLIs: `--target <slug>` (looked up with `find_target`) or `--targets <path>` (all enabled). `--repo/--workflow/--branch` stay, building a `Target` directly.
-
-### 3.3 Migration of the existing n8n data
-
-A one-off, run by the user from `projects/2/`. No re-fetch:
-
-```bash
-R=data/raw/n8n-io__n8n; S=n8n-io__n8n__33323319@master
-mkdir -p "$R/wf-33323319@master" && mv "$R/runs" "$R/attempts" "$R/jobs" "$R/wf-33323319@master/"
-mv data/processed/n8n-io__n8n.csv "data/processed/$S.csv"
-for k in manifest schema; do mv "results/collection/${k}_n8n-io__n8n.json" "results/collection/${k}_$S.json"; done
-for f in results/features/*_n8n-io__n8n.json results/model/*_n8n-io__n8n_*; do mv "$f" "${f/n8n-io__n8n/$S}"; done
-```
-
-`repo.git` and `salt.bin` stay where they are. Sidecars already hold `repo`, `workflow_id` and `branch`, so they need no edit. Check: `build-dataset --target n8n-io__n8n__33323319@master` reproduces the moved CSV.
+- CLIs (`collect-runs`, `build-dataset`): exactly one of `--target <slug>` (looked up with `find_target`), `--targets <path>` (all enabled), or `--repo` with `--workflow` (`--branch` optional; omitted = all branches). There is no default target. `train-final` requires `--dataset`, `predict-run` requires `--model`.
 
 ## 4. Collector (`collect/gh_runs.py`)
 
@@ -121,7 +105,7 @@ EVENTS: frozenset[str] = frozenset({"push", "pull_request", "merge_group"})  # c
 
 ### 4.2 Sub-day windows
 
-- Top level: calendar months, as today. File names stay `YYYY-MM-DD_YYYY-MM-DD.json`, so old caches remain valid.
+- Top level: calendar months. File names are `YYYY-MM-DD_YYYY-MM-DD.json`.
 - Halving works on `datetime` (UTC) bounds. A window of whole days halves on day boundaries while it spans more than one day. A one-day window halves into hour-aligned datetime windows.
 - Sub-day files are named `YYYY-MM-DDTHH-MM-SS_YYYY-MM-DDTHH-MM-SS.json`. The query uses `created=YYYY-MM-DDTHH:MM:SSZ..YYYY-MM-DDTHH:MM:SSZ` (both ends inclusive, so the halves are `[a, mid]` and `[mid + 1 s, b]`).
 - The `RuntimeError` is raised only when a **one-hour** window holds ≥ `MAX_WINDOW_RUNS`.
@@ -199,7 +183,7 @@ load(targets: str | list[str], target: Label, until: datetime | None = None) -> 
 - A single slug behaves as today.
 - A list: read each table, raise `ValueError` if the `feature_cols` of the schemas differ (name the first mismatching slug), add `source = slug`, concatenate, sort by `created_at` (stable, ties by `source`, `run_id`), then apply `until`, T2, and the dev cut, as today.
 - `Dataset` gains `source: pd.Series`, the slug per row (for a single slug, the same constant).
-- `meta` adds `dataset` (the slug, or `pool_name(slugs)` for a list), `sources: list[str]` and `per_source: {slug: {"n_rows", "n_failed"}}`. `meta["repo"]` is dropped for pooled datasets. `analysis/features.py` (`Selection.save`, `select_features` meta) keys on `meta["dataset"]` instead of `meta["repo"]`.
+- `meta["dataset"]` (the slug since phase 1) is `pool_name(slugs)` for a list. `meta` adds `sources: list[str]` and `per_source: {slug: {"n_rows", "n_failed"}}`. `meta["repo"]` is dropped for pooled datasets; `training/cv.py` then checks `meta["dataset"]` instead of `meta["repo"]`.
 - `run_cv`: when `ds.source.nunique() > 1`, each fold also emits one row per source with `source = slug`. The pooled row has `source = "all"`, and single-source runs keep that column too. Baselines are scored on the same per-source slices.
 - E3 needs no new API: `load([s for s in slugs if repo_of(s) != X], ...)` for training, `load(slugs_of(X), ...)` for testing. Notebook helpers stay in the notebook.
 
@@ -222,7 +206,7 @@ main()  # CLI `label-check --target <slug> | --targets <path> [--all]`
 
 ### 9.1 `validate/live.py`
 
-- `train_final(dataset: str | list[str], target, model, params)`: the sidecar replaces `repo/workflow_id/branch` with `targets: [{"repo", "workflow_id", "branch", "slug"}]`. Old single-target sidecars are read as a one-item list.
+- `train_final(dataset: str | list[str], target, model, params)`: the sidecar replaces `repo/workflow_id/branch` with `targets: [{"repo", "workflow_id", "branch", "slug"}]`.
 - `retest(path)`: refresh and build each sidecar target, concatenate the post-C rows, and score pooled plus per source. `_retest_runs.csv` gains `source`.
 - `predict_run(path, ref, slug=None)`: `slug` is required when the sidecar has more than one target, and must be one of them (`ValueError` otherwise). `_fetch_run`'s SHA lookup drops the `branch` filter when the target has none.
 - `predict_run_main` gains `--target <slug>` and `--record <path.jsonl>`. `--record` appends `{slug, run_id, created_at, predicted_at, p_fail, threshold, pred, imputed: [features], scenario: <str|null>}`. The scenario comes from `--scenario`.
@@ -245,14 +229,14 @@ All tests run offline. API data comes from recorded JSON fixtures, git from tiny
 | File | Cases |
 |---|---|
 | `test_targets.py` (new) | valid file; each validation error of §2 (missing key, unknown key, bad repo, `workflow_id` bool/0/str, empty branch, bad regex, duplicate slug); `enabled_only`; `find_target` of a disabled target |
-| `test_collect.py` | `slug` with and without a branch, `/` in a branch; no `branch`/`event` params for an all-branch target; a day with 2,400 runs splits into hour windows and only leaves are written; resume makes zero calls; an hour above the cap raises; unsupported events get no details; legacy month files are reused |
+| `test_collect.py` | `slug` with and without a branch, `/` in a branch; no `branch`/`event` params for an all-branch target; a day with 2,400 runs splits into hour windows and only leaves are written; resume makes zero calls; an hour above the cap raises; unsupported events get no details |
 | `test_git_changes.py` | `clone` without a branch fetches `refs/pull/*/head` (local bare "remote" in `tmp_path`); `merge_base` of a branch; `merge_base` with a missing SHA is None |
 | `test_history.py` (new) | two interleaved lineages: `prev_failed` and `fail_streak` follow their own lineage; the first run of a lineage gets NaN and `lineage_first_run = 1`; a lineage run completed after the current run's creation is not "previous"; `sha_prior_failed` reads only completed runs; no `lineage` column means the same output as today (golden frame) |
 | `test_build.py` | `lineage()` for push, PR, fork PR (empty `pull_requests`), merge queue; all-excluded failure dropped as `infra_failure`; mixed failure kept; unsupported event dropped as `event_schedule`; event one-hot and `from_fork` columns |
 | `test_load.py` | two toy tables interleave by `created_at`; `source` set; mismatched `feature_cols` raise; `until`, T2 (P-D4: NaN kept) and the dev cut act after pooling; one slug behaves as before |
 | `test_cv.py` | per-source rows sum to the pooled row's `n_test` and `n_fail`; single source gives `source = "all"` only |
 | `test_labels.py` (new) | top-job coverage stops at ≥ 80%; infra share after `exclude_jobs`; T2 failure count on a toy lineage set |
-| `test_live.py` | multi-target sidecar round-trip; old sidecar read as one target; `predict_run` without `slug` on a multi-target model raises; `--record` writes one JSON line |
+| `test_live.py` | multi-target sidecar round-trip; `predict_run` without `slug` on a multi-target model raises; `--record` writes one JSON line |
 | `test_sandbox.py` (new) | a row predicted after completion is dropped and counted; per-scenario table counts |
 
 `test_load.py::test_t2` changes on purpose (P-D4): row 0 (NaN `prev_failed`) is now kept.

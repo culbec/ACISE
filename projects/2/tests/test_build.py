@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from acise_p2_cidt.collect import gh_runs
-from acise_p2_cidt.collect.gh_runs import Target
+from acise_p2_cidt.collect.targets import Target, slug
 from acise_p2_cidt.data import build, load
 from acise_p2_cidt.data.build import history_features
 
@@ -115,7 +115,7 @@ def raw(tmp_path, monkeypatch):
     monkeypatch.setattr(load, "PROCESSED_DIR", tmp_path / "processed")
     monkeypatch.setattr(load, "SCHEMA_DIR", tmp_path / "results")
     d = gh_runs.raw_dir(T)
-    repo = d / "repo.git"
+    repo = gh_runs.repo_root(T.repo) / "repo.git"
     repo.mkdir(parents=True)
     _git(repo, "init", "-q", "-b", "main")
     _git(repo, "config", "user.email", EMAIL)
@@ -203,7 +203,7 @@ def test_build_end_to_end(raw):
     }
 
     out = build.write(df, schema, T)
-    assert json.loads(load.schema_path(T.repo).read_text())["n_runs"] == 3
-    assert load.available_repos() == [T.repo]
-    ds = load.load(T.repo, "T1")
+    assert json.loads(load.schema_path(slug(T)).read_text())["n_runs"] == 3
+    assert load.available_targets() == [slug(T)]
+    ds = load.load(slug(T), "T1")
     assert list(ds.X.columns) == schema["feature_cols"] and out.exists()

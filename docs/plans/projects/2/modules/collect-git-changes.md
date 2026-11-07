@@ -1,6 +1,8 @@
 # `collect/git_changes.py`
 
-Status: todo (step 2). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_git_changes.py`.
+Status: done (step 2). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_git_changes.py`.
+
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §3.2 clone location `repo_root(repo)` (done, phase 1), §5 all-branch clone, `default_branch`, `merge_base` (phase 2). Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 

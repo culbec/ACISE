@@ -4,11 +4,17 @@ import os
 import pathlib
 from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, NamedTuple
+from typing import Any
 
 from rich.progress import MofNCompleteColumn, Progress
 
 from acise_p2_cidt.collect import http
+from acise_p2_cidt.collect.targets import (
+    Target,
+    add_target_args,
+    slug,
+    targets_from_args,
+)
 from acise_p2_cidt.utils.logging.log import get_logger, log
 
 # The runs endpoint returns at most 1000 results per query; a window at or above
@@ -23,23 +29,19 @@ RESULTS_DIR = pathlib.Path(__file__).resolve().parents[3] / "results" / "collect
 logger = get_logger(__name__)
 
 
-class Target(NamedTuple):
-    repo: str  # "owner/name"
-    workflow_id: int  # the push workflow on the branch
-    branch: str
-
-
-N8N_MASTER = Target("n8n-io/n8n", 33323319, "master")
-
-
 # =============================================================================
 # Cache
 # =============================================================================
 
 
+def repo_root(repo: str) -> pathlib.Path:
+    """`data/raw/<owner>__<name>`: the clone and salt, shared by the repo's targets."""
+    return RAW_ROOT / repo.replace("/", "__")
+
+
 def raw_dir(t: Target) -> pathlib.Path:
-    """`data/raw/<owner>__<name>`: the on-disk cache of one target."""
-    return RAW_ROOT / t.repo.replace("/", "__")
+    """`data/raw/<owner>__<name>/<slug>`: the API cache of one target."""
+    return repo_root(t.repo) / slug(t)
 
 
 def read_json(path: pathlib.Path) -> Any:
@@ -228,7 +230,7 @@ def collect(
             f"GET /repos/{t.repo}/actions/runs/<id>/attempts/1/jobs",
         ],
     }
-    out = RESULTS_DIR / f"manifest_{t.repo.replace('/', '__')}.json"
+    out = RESULTS_DIR / f"manifest_{slug(t)}.json"
     _write_json(out, manifest)
     log.print(f"{manifest['n_runs']} runs cached, {manifest['api_calls']} API calls")
     return out
@@ -236,14 +238,12 @@ def collect(
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Collect GitHub Actions runs.")
-    p.add_argument("--repo", default=N8N_MASTER.repo)
-    p.add_argument("--workflow", type=int, default=N8N_MASTER.workflow_id)
-    p.add_argument("--branch", default=N8N_MASTER.branch)
+    add_target_args(p)
     p.add_argument("--since", type=date.fromisoformat)
     p.add_argument("--until", type=date.fromisoformat)
     a = p.parse_args()
-    t = Target(a.repo, a.workflow, a.branch)
-    log.print(f"manifest: {collect(t, a.since, a.until)}")
+    for cfg in targets_from_args(a):
+        log.print(f"manifest: {collect(cfg.target, a.since, a.until)}")
 
 
 if __name__ == "__main__":
