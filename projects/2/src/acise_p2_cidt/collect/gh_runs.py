@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import pathlib
+from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -20,6 +21,10 @@ from acise_p2_cidt.utils.logging.log import get_logger, log
 # The runs endpoint returns at most 1000 results per query; a window at or above
 # this count is split, otherwise its tail would be cut.
 MAX_WINDOW_RUNS: int = 1000
+# openclaw peaks near 2,000 runs a day; an hour stays far below the 1,000 cap.
+MIN_WINDOW: timedelta = timedelta(hours=1)
+# Events that carry a code change; other runs (schedule, dispatch) get no details.
+EVENTS: frozenset[str] = frozenset({"push", "pull_request", "merge_group"})
 
 # projects/2/src/acise_p2_cidt/collect/gh_runs.py -> projects/2/data/raw
 RAW_ROOT = pathlib.Path(__file__).resolve().parents[3] / "data" / "raw"
@@ -99,33 +104,58 @@ def _months(since: date, until: date) -> list[tuple[date, date]]:
     return out
 
 
-def _fetch_window(t: Target, a: date, b: date) -> list[pathlib.Path]:
+def _bounds(a: date, b: date) -> tuple[datetime, datetime]:
+    """Days `[a, b]` as UTC datetimes `[a 00:00, b + 1 day 00:00)`."""
+    start = datetime(a.year, a.month, a.day, tzinfo=UTC)
+    return start, start + timedelta(days=(b - a).days + 1)
+
+
+def _span(a: datetime, e: datetime) -> tuple[str, str]:
     """
-    Runs created in `[a, b]`, halved until each half is under `MAX_WINDOW_RUNS`.
-    A `.split` marker records a halving, so a resumed collection makes no calls for
+    File stem and `created` query of the window `[a, e)`. Whole-day windows keep
+    the date form, so caches written before sub-day windows stay valid.
+    """
+    if a.time() == e.time() == datetime.min.time():
+        last = (e - timedelta(days=1)).date()
+        return f"{a.date()}_{last}", f"{a.date()}..{last}"
+    b = e - timedelta(seconds=1)  # the query is inclusive at both ends
+    f, q = "%Y-%m-%dT%H-%M-%S", "%Y-%m-%dT%H:%M:%SZ"
+    return f"{a:{f}}_{b:{f}}", f"{a:{q}}..{b:{q}}"
+
+
+def _fetch_window(t: Target, a: datetime, e: datetime) -> list[pathlib.Path]:
+    """
+    Runs created in `[a, e)`, halved until each half is under `MAX_WINDOW_RUNS`:
+    on day boundaries while the window spans several days, then on hours. A
+    `.split` marker records a halving, so a resumed collection makes no calls for
     windows already on disk.
     """
-    out = raw_dir(t) / "runs" / f"{a}_{b}.json"
-    # A window saved before its last day ended misses later runs and holds runs
-    # still in progress, so it is fetched again.
-    if out.exists() and datetime.fromtimestamp(out.stat().st_mtime, UTC).date() > b:
+    stem, created = _span(a, e)
+    out = raw_dir(t) / "runs" / f"{stem}.json"
+    # A window saved before it ended misses later runs and holds runs still in
+    # progress, so it is fetched again.
+    if out.exists() and datetime.fromtimestamp(out.stat().st_mtime, UTC) >= e:
         return [out]
     split = out.with_suffix(".split")
     if not split.exists():
         path = f"/repos/{t.repo}/actions/workflows/{t.workflow_id}/runs"
-        params = {"branch": t.branch, "event": "push", "created": f"{a}..{b}"}
+        params = {"created": created}
+        if t.branch is not None:
+            params["branch"] = t.branch
         total = http.get(path, {**params, "per_page": 1})["total_count"]
         if total < MAX_WINDOW_RUNS:
             runs = http.get_all(path, params, key="workflow_runs")
             _write_json(out, {"total_count": total, "workflow_runs": runs})
-            logger.info("window %s..%s: %d runs", a, b, len(runs))
+            logger.info("window %s: %d runs", created, len(runs))
             return [out]
-        if a == b:
-            raise RuntimeError(f"{total} runs on {a}: one day is above the API cap")
+        if e - a <= MIN_WINDOW:
+            raise RuntimeError(f"{total} runs in {created}: above the API cap")
         split.parent.mkdir(parents=True, exist_ok=True)
         split.touch()
-    mid = a + (b - a) // 2
-    return _fetch_window(t, a, mid) + _fetch_window(t, mid + timedelta(days=1), b)
+    days = e - a > timedelta(days=1) and a.time() == e.time() == datetime.min.time()
+    unit = timedelta(days=1) if days else MIN_WINDOW
+    mid = a + unit * (((e - a) // unit + 1) // 2)
+    return _fetch_window(t, a, mid) + _fetch_window(t, mid, e)
 
 
 def fetch_details(t: Target, runs: Iterable[dict]) -> int:
@@ -143,7 +173,7 @@ def fetch_details(t: Target, runs: Iterable[dict]) -> int:
     """
     d, n = raw_dir(t), 0
     for r in runs:
-        if r["status"] != "completed":
+        if r["status"] != "completed" or r["event"] not in EVENTS:
             continue
         run_url = f"/repos/{t.repo}/actions/runs/{r['id']}/attempts/1"
         attempt = d / "attempts" / f"{r['id']}.json"
@@ -180,7 +210,7 @@ def fetch_windows(t: Target, since: date, until: date) -> list[pathlib.Path]:
         w_task = bar.add_task("windows", total=len(months))
         r_task = bar.add_task("runs")
         for a, b in months:
-            for p in _fetch_window(t, a, b):
+            for p in _fetch_window(t, *_bounds(a, b)):
                 runs = read_json(p)["workflow_runs"]
                 bar.reset(r_task, total=len(runs), description=p.stem)
                 fetch_details(t, bar.track(runs, task_id=r_task))
@@ -212,6 +242,8 @@ def collect(
         since = datetime.fromisoformat(workflow["created_at"]).date()
     until = until or datetime.now(UTC).date()
     windows = fetch_windows(t, since, until)
+    runs = cached_runs(t)
+    branch = "" if t.branch is None else f"branch={t.branch}&"
 
     manifest = {
         "target": t._asdict(),
@@ -219,12 +251,13 @@ def collect(
         "until": str(until),
         "collected_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "windows": {p.stem: read_json(p)["total_count"] for p in windows},
-        "n_runs": len(cached_runs(t)),
+        "n_runs": len(runs),
+        "runs_per_event": dict(Counter(r["event"] for r in runs).most_common()),
         "api_calls": http.calls - calls0,
         "queries": [
             (
                 f"GET /repos/{t.repo}/actions/workflows/{t.workflow_id}/runs"
-                f"?branch={t.branch}&event=push&created=<window>"
+                f"?{branch}created=<window>"
             ),
             f"GET /repos/{t.repo}/actions/runs/<id>/attempts/1",
             f"GET /repos/{t.repo}/actions/runs/<id>/attempts/1/jobs",

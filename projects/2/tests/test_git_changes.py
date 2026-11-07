@@ -3,6 +3,7 @@ import subprocess
 
 import pytest
 
+from acise_p2_cidt.collect import gh_runs
 from acise_p2_cidt.collect import git_changes as gc
 
 
@@ -78,6 +79,38 @@ def test_missing_sha_returns_none(repo):
     gone = "f" * 40
     assert gc.diff_numstat(r, c1, gone) is None
     assert gc.rev_count(r, gone, c1) is None
+
+
+def test_merge_base(repo):
+    r, (c1, c2, c3, merge) = repo
+    f1 = git(r, "rev-parse", "feature")
+    assert gc.merge_base(r, c3, f1) == c2  # feature branched off at c2
+    assert gc.merge_base(r, merge, f1) == f1  # merged: the head itself
+    assert gc.merge_base(r, c1, "f" * 40) is None
+    assert gc.default_branch(r) == "main"
+
+
+def test_clone_all_branches_fetches_pr_heads(repo, tmp_path, monkeypatch):
+    r, (c1, *_) = repo
+    remote = tmp_path / "remote" / "o"
+    remote.mkdir(parents=True)
+    git(remote, "clone", "-q", "--bare", str(r), "r")
+    git(remote / "r", "update-ref", "refs/pull/7/head", c1)  # a fork PR head
+    monkeypatch.setattr(gc, "REMOTE_ROOT", str(tmp_path / "remote"))
+    monkeypatch.setattr(gh_runs, "RAW_ROOT", tmp_path / "raw")
+
+    def refs(d):
+        return set(git(d, "for-each-ref", "--format=%(refname)").split())
+
+    want = {"refs/heads/main", "refs/heads/feature", "refs/pull/7/head"}
+    # an existing single-branch clone gains the missing refs
+    one = gc.clone("o/r", "main")
+    assert refs(one) == {"refs/heads/main"}
+    assert gc.clone("o/r", None) == one and refs(one) == want
+    # a fresh all-branch clone gets them at once
+    monkeypatch.setattr(gh_runs, "RAW_ROOT", tmp_path / "raw2")
+    d = gc.clone("o/r", None)
+    assert refs(d) == want and gc.default_branch(d) == "main"
 
 
 def test_revert_link(repo):

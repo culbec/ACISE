@@ -64,35 +64,55 @@ def _git(repo_dir: pathlib.Path, *args: str) -> str:
     ).stdout
 
 
-def clone(repo: str, branch: str) -> pathlib.Path:
+REMOTE_ROOT: str = "https://github.com"
+# Every branch head and every PR head (fork PRs included), so PR runs' heads are
+# reachable.
+_ALL_REFS: tuple[str, ...] = (
+    "+refs/heads/*:refs/heads/*",
+    "+refs/pull/*/head:refs/pull/*/head",
+)
+
+
+def clone(repo: str, branch: str | None) -> pathlib.Path:
     """
-    Full single-branch bare clone into `data/raw/<owner>__<name>/repo.git`, or a
-    fetch if it exists. Not blobless: `--numstat` reads every file's content.
+    Full bare clone into `data/raw/<owner>__<name>/repo.git`, or a fetch if it
+    exists. Not blobless: `--numstat` reads every file's content.
 
     Args:
         repo (str): "owner/name".
-        branch (str): branch to clone.
+        branch (str | None): branch to clone; None = every branch head and
+            `refs/pull/*/head`. On an existing single-branch clone, None adds the
+            missing refs.
 
     Returns:
         pathlib.Path: the bare repository.
     """
     dest = repo_root(repo) / "repo.git"
-    if dest.exists():
+    if not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        one = ["--single-branch", "-b", branch] if branch else []
+        _git(dest.parent, "clone", "--bare", *one, f"{REMOTE_ROOT}/{repo}", dest.name)
+        if branch:
+            return dest
+    if branch:
         _git(dest, "fetch", "origin", f"+{branch}:{branch}")
     else:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        url = f"https://github.com/{repo}"
-        _git(
-            dest.parent,
-            "clone",
-            "--bare",
-            "--single-branch",
-            "-b",
-            branch,
-            url,
-            dest.name,
-        )
+        _git(dest, "fetch", "origin", *_ALL_REFS, "--prune")
     return dest
+
+
+def default_branch(repo_dir: pathlib.Path) -> str:
+    """The clone's HEAD branch, i.e. the remote's default branch."""
+    return _git(repo_dir, "symbolic-ref", "--short", "HEAD").strip()
+
+
+@functools.cache
+def merge_base(repo_dir: pathlib.Path, a: str, b: str) -> str | None:
+    """Best common ancestor of two revisions; memoised. None if a SHA is missing."""
+    try:
+        return _git(repo_dir, "merge-base", a, b).strip() or None
+    except subprocess.CalledProcessError:
+        return None
 
 
 @functools.cache
