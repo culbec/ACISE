@@ -55,11 +55,11 @@ def test_t1():
 
 def test_t2():
     ds = load.load(SLUG, "T2")
-    # prev_failed == 0 on rows 1, 3, 4, 7, 8, 9; NaN (row 0) is dropped
-    assert ds.X["churn"].tolist() == [1, 3, 4, 7, 8, 9]
-    assert "prev_failed" not in ds.X  # constant on T2
-    assert ds.dev_mask.tolist() == [True] + [False] * 5  # cut after the filter
-    assert ds.y.tolist() == [1, 0, 1, 0, 0, 1]
+    # prev_failed == 0 on rows 1, 3, 4, 7, 8, 9; NaN (row 0, no previous run) is kept
+    assert ds.X["churn"].tolist() == [0, 1, 3, 4, 7, 8, 9]
+    assert "prev_failed" not in ds.X  # 0 or NaN on T2
+    assert ds.dev_mask.tolist() == [True] + [False] * 6  # cut after the filter
+    assert ds.y.tolist() == [0, 1, 0, 1, 0, 0, 1]
 
 
 @pytest.mark.parametrize(

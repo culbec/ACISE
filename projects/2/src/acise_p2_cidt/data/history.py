@@ -1,5 +1,7 @@
 import pathlib
+from bisect import insort
 from collections import defaultdict
+from typing import NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -41,12 +43,16 @@ def history_features(runs: pd.DataFrame) -> pd.DataFrame:
     Runs are in creation order. A pointer over the completion order moves every run
     with `completed_at < created_at_i` into the known set before row i is processed.
     A run completed before row i was also created before it, so the known set is a
-    subset of the earlier rows. "Previous" is the latest-created known run.
+    subset of the earlier rows. "Previous" is the latest-created known run of the
+    same lineage (PR or branch): the previous run of the whole workflow is often an
+    unrelated PR. Rates over time windows, load, flaky, author and file statistics
+    stay workflow-wide. Without a `lineage` column all runs share one lineage.
     Optional `files` (set of paths) and `reverts` (SHA) columns feed the file
     failure and revert features.
 
     Args:
-        runs (pd.DataFrame): `runs_frame` output, optionally with `files`, `reverts`.
+        runs (pd.DataFrame): `runs_frame` output, optionally with `lineage`,
+            `files`, `reverts`.
 
     Returns:
         pd.DataFrame: one row per run, same index; `_prev_idx` and `_green_idx` are
@@ -65,8 +71,13 @@ def history_features(runs: pd.DataFrame) -> pd.DataFrame:
     files = runs["files"].tolist() if "files" in runs else [frozenset()] * n
     reverts = runs["reverts"].tolist() if "reverts" in runs else [None] * n
     shas = runs["head_sha"].tolist()
+    lineages = runs["lineage"].tolist() if "lineage" in runs else [""] * n
 
     known = np.zeros(n, bool)
+    # known positions per lineage and per head SHA, in creation order
+    by_lineage: dict[str, list[int]] = defaultdict(list)
+    by_sha: dict[str, list[int]] = defaultdict(list)
+    last_created: dict[str, int] = {}  # latest-created run per lineage, known or not
     by_completion = np.argsort(completed, kind="stable")
     k = 0
     file_stats: dict[str, list[int]] = defaultdict(lambda: [0, 0])  # runs, failed
@@ -77,6 +88,8 @@ def history_features(runs: pd.DataFrame) -> pd.DataFrame:
         while k < n and completed[by_completion[k]] < t:
             j = by_completion[k]
             known[j] = True
+            insort(by_lineage[lineages[j]], j)
+            insort(by_sha[shas[j]], j)
             for f in files[j]:
                 file_stats[f][0] += 1
                 file_stats[f][1] += failed[j]
@@ -86,26 +99,37 @@ def history_features(runs: pd.DataFrame) -> pd.DataFrame:
 
         idx = np.flatnonzero(known[:i])  # creation order
         f, comp = failed[idx], completed[idx]
+        lin_name = lineages[i]
+        lin = np.array(by_lineage[lin_name], dtype=int)
+        lf = failed[lin]
+        prev_created = last_created.get(lin_name)
+        last_created[lin_name] = i
         row: dict[str, float] = {
             "secs_since_prev_run": t - created[i - 1] if i else np.nan,
             "concurrent_runs": i - len(idx),  # created before, not completed yet
+            "lineage_prior_runs": len(lin),
+            "lineage_first_run": int(len(lin) == 0),
+            # creation is known before the outcome, so a running run counts
+            "secs_since_lineage_prev_run": (
+                t - created[prev_created] if prev_created is not None else np.nan
+            ),
         }
         # Creation is known before the outcome, so load counts every earlier run.
         for name, w in LOAD_WINDOWS.items():
             row[f"ci_load_{name}"] = i - np.searchsorted(created, t - w, "left")
 
-        last = idx[-1] if len(idx) else None
+        last = lin[-1] if len(lin) else None
         row[PREV_LABEL_COL] = failed[last] if last is not None else np.nan
         row["prev_duration"] = duration[last] if last is not None else np.nan
         row["prev_queue_delay"] = queue[last] if last is not None else np.nan
         row["prev_failed_jobs"] = n_failed_jobs[last] if last is not None else np.nan
-        rev = f[::-1]
+        rev = lf[::-1]
         row["fail_streak"] = len(rev) if rev.all() else int(np.argmin(rev))
-        fails = idx[f == 1]
-        passes = idx[f == 0]
+        fails = lin[lf == 1]
+        passes = lin[lf == 0]
         last_fail = fails[-1] if len(fails) else None
         row["runs_since_last_fail"] = (
-            int((idx > last_fail).sum()) if last_fail is not None else np.nan
+            int((lin > last_fail).sum()) if last_fail is not None else np.nan
         )
         row["secs_since_last_fail"] = (
             t - completed[last_fail] if last_fail is not None else np.nan
@@ -113,7 +137,7 @@ def history_features(runs: pd.DataFrame) -> pd.DataFrame:
         for name, w in RATE_WINDOWS.items():
             row[f"fail_rate_{name}"] = _mean_or_nan(f[comp >= t - w])
         for c in COUNT_WINDOWS:
-            row[f"fail_rate_last_{c}"] = _mean_or_nan(f[-c:])
+            row[f"fail_rate_last_{c}"] = _mean_or_nan(lf[-c:])
         for name, w in FLAKY_WINDOWS.items():
             sel = idx[(comp >= t - w) & (latest[idx] < t)]  # final outcome known
             row[f"flaky_rate_{name}"] = _mean_or_nan(flaky[sel])
@@ -135,6 +159,8 @@ def history_features(runs: pd.DataFrame) -> pd.DataFrame:
             hits = [j for j in idx if shas[j].startswith(reverts[i])]
             if hits:
                 row["reverted_sha_failed"] = failed[hits[-1]]
+        same = by_sha.get(shas[i])  # e.g. the push and the PR run of one commit
+        row["sha_prior_failed"] = failed[same[-1]] if same else np.nan
         row["_prev_idx"] = last if last is not None else np.nan
         row["_green_idx"] = passes[-1] if len(passes) else np.nan
         out.append(row)
@@ -187,36 +213,115 @@ def _since(repo_dir: pathlib.Path, ref: str | None, sha: str, tag: str) -> dict:
     }
 
 
+class RunChange(NamedTuple):
+    pos: int  # anchor position in the deduplicated commit log
+    before: int  # history reads log positions strictly below this
+    change: pd.DataFrame  # path, kind, added, deleted
+    parents: list[str]
+    commit_time: float
+    subject: str
+    reverts: str | None
+    author_id: str
+
+
+def _ch_log(log: pd.DataFrame, commits: pd.DataFrame) -> pd.DataFrame:
+    return log[log["path"].notna()].merge(
+        commits[["sha"]].reset_index(names="pos"), on="sha"
+    )
+
+
+def run_changes(
+    runs: pd.DataFrame, log: pd.DataFrame, repo_dir: pathlib.Path
+) -> list[RunChange | None]:
+    """
+    Anchors each run on the walked branch's first-parent line and reads its change.
+
+    The anchor is the head if it is on the line, else `merge-base(base_sha, head)`,
+    else (a merge-base off the line: stacked PR, earlier merge-queue entry, release
+    branch) the line commit its branch forked from. History is read before the
+    head, or up to and including the anchor. The
+    change of a head on the line is its log rows; off the line it is the whole
+    proposed change, `merge-base..head` (PR and merge-queue runs), or `head^..head`
+    (pushes to other branches).
+
+    Args:
+        runs (pd.DataFrame): `runs_frame` output, with `event`, `base_sha` and
+            `author_id`; without `event` every run is a push.
+        log (pd.DataFrame): `commit_log` output with an `author_id` column.
+        repo_dir (pathlib.Path): the clone, for merge-bases and diffs.
+
+    Returns:
+        list[RunChange | None]: one per run; None without an anchor (head or
+            base missing, or no fork point on the line).
+    """
+    commits = log.drop_duplicates("sha").reset_index(drop=True)
+    pos_of = dict(zip(commits["sha"], commits.index))
+    ch_log = _ch_log(log, commits)
+    on_log = dict(
+        tuple(ch_log[ch_log["sha"].isin(set(runs["head_sha"]))].groupby("sha"))
+    )
+    empty = ch_log.iloc[:0][["path", "kind", "added", "deleted"]]
+    n = len(runs)
+    events = runs["event"].tolist() if "event" in runs else ["push"] * n
+    bases = runs["base_sha"].tolist() if "base_sha" in runs else [None] * n
+    authors = runs["author_id"].tolist()
+    out: list[RunChange | None] = []
+    for i, sha in enumerate(
+        track(runs["head_sha"], description="run changes", console=console)
+    ):
+        if sha in pos_of:
+            p = pos_of[sha]
+            c = commits.loc[p]
+            ch = on_log.get(sha, empty)[["path", "kind", "added", "deleted"]]
+            out.append(RunChange(p, p, ch, c["parents"], float(c["commit_time"]),
+                                 c["subject"], c["reverts"], c["author_id"]))  # fmt: skip
+            continue
+        base = bases[i]
+        mb = git.merge_base(repo_dir, base, sha) if isinstance(base, str) else None
+        # a merge-base off the line (stacked PR, earlier queue entry, release
+        # branch): anchor where its branch forked from the line
+        anchor = mb if mb in pos_of or mb is None else git.first_parent_on(repo_dir, mb, pos_of)  # fmt: skip
+        info = git.commit_info(repo_dir, sha) if anchor is not None else None
+        ref = f"{sha}^" if events[i] == "push" else mb
+        ch = git.diff_numstat(repo_dir, ref, sha) if info is not None else None
+        if ch is None:
+            out.append(None)
+            continue
+        parents, ct, subject, reverts = info
+        # the anchor's own change precedes the head
+        out.append(RunChange(pos_of[anchor], pos_of[anchor] + 1, ch, parents,
+                             float(ct), subject, reverts, authors[i]))  # fmt: skip
+    return out
+
+
 def git_features(
     runs: pd.DataFrame,
     hist: pd.DataFrame,
     log: pd.DataFrame,
+    changes: list[RunChange | None],
     repo_dir: pathlib.Path,
     tag_times: np.ndarray,
     rows: np.ndarray | None = None,
 ) -> pd.DataFrame:
     """
     Change size and type, commit, file history, since-previous/green and workflow
-    features. File history reads only commits earlier on the first-parent line
-    than `head_sha`, i.e. the `commit_log` prefix before it.
+    features, read at each run's anchor (`run_changes`).
 
     Args:
         runs (pd.DataFrame): `runs_frame` output.
         hist (pd.DataFrame): `history_features` output (reference run positions).
         log (pd.DataFrame): `commit_log` output with an `author_id` column.
+        changes (list[RunChange | None]): `run_changes` output.
         repo_dir (pathlib.Path): the clone, for the diffs between run SHAs.
         tag_times (np.ndarray): sorted tag commit times (unix seconds).
         rows (np.ndarray | None): positions of the runs to compute; None = all.
 
     Returns:
-        pd.DataFrame: one row per computed run, same index; NaN where `head_sha` is
-            not on the branch.
+        pd.DataFrame: one row per computed run, same index; NaN where the run has
+            no anchor.
     """
     commits = log.drop_duplicates("sha").reset_index(drop=True)
-    pos_of = dict(zip(commits["sha"], commits.index))
-    ch_log = log[log["path"].notna()].merge(
-        commits[["sha"]].reset_index(names="pos"), on="sha"
-    )
+    ch_log = _ch_log(log, commits)
     file_hist = {}  # path -> (positions, commit times, cumulative distinct authors)
     for path, g in ch_log.groupby("path", sort=False):
         first_seen = ~g["author_id"].duplicated()
@@ -227,50 +332,56 @@ def git_features(
         a: g.to_numpy() for a, g in commits.reset_index().groupby("author_id")["index"]
     }
     first_touch = ch_log.groupby(["author_id", "path"])["pos"].min().to_dict()
-    run_changes = dict(
-        tuple(ch_log[ch_log["sha"].isin(set(runs["head_sha"]))].groupby("sha"))
-    )
-    empty = ch_log.iloc[:0]
     shas = runs["head_sha"].tolist()
 
     rows = np.arange(len(runs)) if rows is None else rows
     out, missing = [], 0
     for i in track(rows, description="git features", console=console):
         sha, created = shas[i], runs["created_at"].iat[i]
-        if sha not in pos_of:
+        rc = changes[i]
+        if rc is None:
             missing += 1
             out.append({})
             continue
-        p, c = pos_of[sha], commits.loc[pos_of[sha]]
-        ch = run_changes.get(sha, empty)
+        p, q, ch, a = rc.pos, rc.before, rc.change, rc.author_id
+        parents, head_t, subject, reverts = (
+            rc.parents,
+            rc.commit_time,
+            rc.subject,
+            rc.reverts,
+        )
         F = set(ch["path"])
-        head_t = float(c["commit_time"])
         row = _change(ch)
-        row["n_parents"] = len(c["parents"])
+        row["n_parents"] = len(parents)
         row["is_revert"] = int(
-            c["subject"].startswith('Revert "') and isinstance(c["reverts"], str)
+            subject.startswith('Revert "') and isinstance(reverts, str)
         )
 
-        ages, changes, n_authors, lasts = [], [], [], []
+        ages, prior, n_authors, lasts = [], [], [], []
         for f in F:
+            if f not in file_hist:  # a file new in this change
+                prior.append(0)
+                n_authors.append(0)
+                continue
             fp, ft, fa = file_hist[f]
-            k = int(np.searchsorted(fp, p))  # changes strictly before head
-            changes.append(k)
+            k = int(np.searchsorted(fp, q))
+            prior.append(k)
             n_authors.append(int(fa[k - 1]) if k else 0)
             if k:
                 ages.append((head_t - ft[0]) / DAY)
                 lasts.append(head_t - ft[k - 1])
         row["file_age_mean"] = float(np.mean(ages)) if ages else np.nan
-        row["file_prior_changes"] = float(np.mean(changes)) if changes else np.nan
+        row["file_prior_changes"] = float(np.mean(prior)) if prior else np.nan
         row["file_distinct_authors"] = (
             float(np.mean(n_authors)) if n_authors else np.nan
         )
         row["secs_since_files_last_changed"] = min(lasts) if lasts else np.nan
 
-        a = c["author_id"]
-        row["author_prior_commits"] = int(np.searchsorted(author_pos[a], p))
+        row["author_prior_commits"] = (
+            int(np.searchsorted(author_pos[a], q)) if a in author_pos else 0
+        )
         row["author_file_familiarity"] = (
-            float(np.mean([first_touch.get((a, f), p) < p for f in F])) if F else np.nan
+            float(np.mean([first_touch.get((a, f), q) < q for f in F])) if F else np.nan
         )
 
         wf = runs["workflow_path"].iat[i]
@@ -289,6 +400,6 @@ def git_features(
         out.append(row)
     if missing:
         logger.warning(
-            "%d runs have a head_sha not on the branch: git features NaN", missing
+            "%d runs have no anchor on the branch: git features NaN", missing
         )
     return pd.DataFrame(out, index=runs.index[rows])

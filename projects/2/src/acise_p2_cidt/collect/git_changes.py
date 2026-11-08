@@ -2,6 +2,7 @@ import functools
 import pathlib
 import re
 import subprocess
+from collections.abc import Container
 from typing import Literal
 
 import numpy as np
@@ -55,9 +56,10 @@ LOG_COLS: list[str] = [
 logger = get_logger(__name__)
 
 
-def _git(repo_dir: pathlib.Path, *args: str) -> str:
+def _git(repo_dir: pathlib.Path, *args: str, stdin: str | None = None) -> str:
     return subprocess.run(
         ["git", "-C", str(repo_dir), "-c", "core.quotePath=false", *args],
+        input=stdin,
         check=True,
         capture_output=True,
         text=True,
@@ -113,6 +115,94 @@ def merge_base(repo_dir: pathlib.Path, a: str, b: str) -> str | None:
         return _git(repo_dir, "merge-base", a, b).strip() or None
     except subprocess.CalledProcessError:
         return None
+
+
+def first_parent_on(
+    repo_dir: pathlib.Path, sha: str, line: Container[str]
+) -> str | None:
+    """
+    The first commit of `line` on `sha`'s first-parent chain: where the branch that
+    holds `sha` (a stacked PR's base, an earlier merge-queue entry, a release
+    branch merged back) forked from the walked line. Always an ancestor of `sha`.
+    None if the chain never reaches the line or `sha` is missing.
+    """
+    with subprocess.Popen(
+        ["git", "-C", str(repo_dir), "rev-list", "--first-parent", sha],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    ) as p:
+        hit = next((c for c in map(str.strip, p.stdout or ()) if c in line), None)
+        p.kill()  # stop the walk at the hit
+    return hit
+
+
+FETCH_BATCH: int = 200
+_SHA = re.compile(r"^[0-9a-f]{40}$")
+
+
+def _missing(repo_dir: pathlib.Path, shas: list[str]) -> list[str]:
+    out = _git(repo_dir, "cat-file", "--batch-check", stdin="\n".join(shas) + "\n")
+    return [line.split()[0] for line in out.splitlines() if line.endswith(" missing")]
+
+
+def fetch_heads(repo_dir: pathlib.Path, shas: list[str]) -> int:
+    """
+    Fetches by SHA the commits missing from the clone. A clone holds only each
+    branch's and PR's current tip, but GitHub still serves replaced heads by SHA.
+    Each lands in `refs/ci/<sha>`, so `gc` never prunes it.
+
+    Args:
+        repo_dir (pathlib.Path): the clone.
+        shas (list[str]): full SHAs; anything else is ignored.
+
+    Returns:
+        int: how many are still missing after the fetch.
+    """
+    shas = sorted({s for s in shas if isinstance(s, str) and _SHA.match(s)})
+    missing = _missing(repo_dir, shas) if shas else []
+    for i in range(0, len(missing), FETCH_BATCH):
+        batch = missing[i : i + FETCH_BATCH]
+        try:
+            _git(repo_dir, "fetch", "-q", "--no-tags", "origin",
+                 *(f"{h}:refs/ci/{h}" for h in batch))  # fmt: skip
+        except subprocess.CalledProcessError:
+            # one unknown SHA fails the whole batch: retry the rest one by one
+            for h in batch:
+                try:
+                    _git(
+                        repo_dir,
+                        "fetch",
+                        "-q",
+                        "--no-tags",
+                        "origin",
+                        f"{h}:refs/ci/{h}",
+                    )
+                except subprocess.CalledProcessError:
+                    pass
+    left = _missing(repo_dir, missing) if missing else []
+    if missing:
+        logger.info(
+            "fetched %d of %d missing heads", len(missing) - len(left), len(missing)
+        )
+    return len(left)
+
+
+@functools.cache
+def commit_info(
+    repo_dir: pathlib.Path, sha: str
+) -> tuple[list[str], int, str, str | None] | None:
+    """
+    Parents, commit time, subject and reverted SHA of one commit; memoised. For
+    heads off the walked branch, which have no `commit_log` row. None if missing.
+    """
+    try:
+        out = _git(repo_dir, "show", "-s", f"--format=%P{_FLD}%ct{_FLD}%s{_FLD}%b", sha)
+    except subprocess.CalledProcessError:
+        return None
+    parents, ct, subject, body = out.split(_FLD, 3)
+    m = _REVERTS.search(body)
+    return parents.split(), int(ct), subject, m and m[1]
 
 
 @functools.cache

@@ -1,15 +1,26 @@
 """
-Synthetic data with the shapes of the real pipeline. Each unit
-extends it; so far it holds the mock targets, their registry, manifests and
-raw API caches.
+Synthetic data with the shapes of the real pipeline: the mock targets, their
+registry, manifests, raw API caches and built tables.
 """
 
 import json
 import pathlib
 from datetime import date
 
+import numpy as np
+import pandas as pd
+
 from acise_p2_cidt.collect import gh_runs, targets
 from acise_p2_cidt.collect.targets import Target, slug
+from acise_p2_cidt.data import build, load
+from acise_p2_cidt.viz import plots
+
+# the real build's feature list; refresh when the build's features change
+FEATURE_COLS: list[str] = json.loads(
+    (pathlib.Path(__file__).parent / "fixtures" / "feature_cols.json").read_text()
+)
+# the label depends on these, so models can learn something
+SIGNAL: tuple[str, ...] = ("churn", "fail_rate_24h", "file_fail_prob_max")
 
 # two workflows of one repo (one restricted to a branch) + one other repo
 TARGETS: list[Target] = [
@@ -53,6 +64,7 @@ def write_raw_cache(t: Target) -> None:
     A tiny API cache: a pass, a code failure, an infra-only failure (`Result`, the
     registry's exclude pattern), a failure without failed jobs, and a schedule run.
     """
+
     def run(i, event, conclusion, minute):
         ts = f"2026-10-01T00:{minute:02d}:00Z"
         return {"id": t.workflow_id * 100 + i, "event": event, "head_branch": "main",
@@ -78,11 +90,75 @@ def write_raw_cache(t: Target) -> None:
         (d / "jobs" / f"{rid}.json").write_text(json.dumps({"jobs": js}))
 
 
+def mock_table(s: str, n: int = 800) -> tuple[pd.DataFrame, dict]:
+    """
+    A built table and its schema, as `build.build` returns them: runs of three
+    events over six months (overlapping across sources), several PR lineages, a
+    fork share, re-runs and flaky failures. A stub for `build`.
+    """
+    k = SOURCES.index(s) if s in SOURCES else 0
+    rng = np.random.default_rng(k)
+    n = n + 200 * k
+    start = pd.Timestamp("2026-05-01", tz="UTC")
+    created = start + pd.to_timedelta(np.sort(rng.uniform(0, 182 * 86400, n)), unit="s")
+    event = rng.choice(["push", "pull_request", "merge_group"], n, p=[0.3, 0.6, 0.1])
+    pr = rng.integers(0, n // 6, n)
+    fork = rng.random(n) < 0.1
+    lineage = np.where(
+        event == "push", "branch:main",
+        np.where(event == "pull_request",
+                 [f"head:{'someone' if f else 'acme'}/app:f{p}" for f, p in zip(fork, pr)],
+                 [f"pr:{p}" for p in pr]),
+    )  # fmt: skip
+    df = pd.DataFrame(rng.normal(size=(n, len(FEATURE_COLS))), columns=FEATURE_COLS)
+    logit = -1.6 + 0.3 * k + df[list(SIGNAL)].sum(axis=1).to_numpy()
+    if k == 0:  # a month of a failing CI leg: a failure-rate shift
+        logit += 3.0 * (created.month == 7)
+    failed = (rng.random(n) < 1 / (1 + np.exp(-logit))).astype(int)
+    for e in ("push", "pull_request", "merge_group"):
+        df[f"event_{e}"] = (event == e).astype(int)
+    df["from_fork"] = (fork & (event == "pull_request")).astype(int)
+    df["is_default_branch"] = (event == "push").astype(int)
+    lin = pd.Series(lineage)
+    df["lineage_prior_runs"] = lin.groupby(lin).cumcount()
+    df["lineage_first_run"] = (df["lineage_prior_runs"] == 0).astype(int)
+    df[load.PREV_LABEL_COL] = pd.Series(failed).groupby(lin).shift()
+    df.loc[rng.random(n) < 0.05, "files_changed"] = np.nan  # unreachable heads
+    rerun = rng.random(n) < 0.05
+    flaky = rerun & (failed == 1) & (rng.random(n) < 0.5)
+    ids = pd.DataFrame({
+        "run_id": np.arange(n) + 10_000 * k, "head_sha": [f"{i:040x}" for i in range(n)],
+        "author_id": rng.choice(["a1", "a2", "a3"], n), "lineage": lineage,
+        "created_at": created, "failed": failed,
+        "event": event, "was_rerun": rerun.astype(int), "flaky": flaky.astype(int),
+        "conclusion_latest": np.where(failed & ~flaky, "failure", "success"),
+        "failed_job_names": np.where(failed == 1, "test (linux)", ""),
+    })  # fmt: skip
+    df = pd.concat([ids, df], axis=1)
+    schema = {
+        "target_slug": s, "collected_at": "2026-11-05T00:00:00+00:00",
+        "n_runs": n, "n_failed": int(failed.sum()),
+        "n_dropped": {"cancelled": 7 + k, "infra_failure": 3, "event_schedule": 2},
+        "exclude_jobs": ["^Result$"], "events": ["merge_group", "pull_request", "push"],
+        "order_col": load.ORDER_COL, "id_cols": build.ID_COLS, "label_col": load.LABEL_COL,
+        "prev_label_col": load.PREV_LABEL_COL, "nominal": [],
+        "diagnostic_cols": build.DIAGNOSTIC_COLS, "feature_cols": FEATURE_COLS,
+    }  # fmt: skip
+    return df, schema
+
+
 def mock_pool(tmp: pathlib.Path, monkeypatch) -> list[str]:
-    """Patches every data path into `tmp`, writes the registry; returns SOURCES."""
+    """
+    Patches every data path into `tmp` and `plots.save` to write nothing, writes
+    the registry and raw caches; returns SOURCES.
+    """
     monkeypatch.setattr(targets, "REGISTRY", tmp / "config" / "targets.json")
     monkeypatch.setattr(gh_runs, "RAW_ROOT", tmp / "raw")
     monkeypatch.setattr(gh_runs, "RESULTS_DIR", tmp / "results" / "collection")
+    monkeypatch.setattr(build, "RESULTS_DIR", tmp / "results" / "collection")
+    monkeypatch.setattr(load, "PROCESSED_DIR", tmp / "processed")
+    monkeypatch.setattr(load, "SCHEMA_DIR", tmp / "results" / "collection")
+    monkeypatch.setattr(plots, "save", lambda fig, name, **k: fig)
     write_registry(targets.REGISTRY)
     for t in TARGETS:
         write_raw_cache(t)

@@ -2,7 +2,7 @@
   {"repo": "n8n-io/n8n", "workflow_id": 33322401, "branch": null, "enabled": true, "exclude_jobs": ["^Required Checks$"]},
   {"repo": "n8n-io/n8n", "workflow_id": 33323319, "branch": "master", "enabled": true, "exclude_jobs": []},
   {"repo": "astral-sh/ruff", "workflow_id": 32130301, "branch": null, "enabled": true, "exclude_jobs": ["^all required checks passed$", "^security-review / security review$"]},
-  {"repo": "astral-sh/uv", "workflow_id": 82881044, "branch": null, "enabled": true, "exclude_jobs": ["^all required jobs passed$", "^test uv publish$", "^review / security review$"]},
+  {"repo": "astral-sh/uv", "workflow_id": 82881044, "branch": null, "enabled": true, "exclude_jobs": ["^all required jobs passed$", "^test uv publish$", "^review / security review$", "^test-system / python3.6 on debian buster$", "^test-(system|integration) / .* :: Install [Pp]ython"]},
   {"repo": "windmill-labs/windmill", "workflow_id": 133951533, "branch": null, "enabled": true, "exclude_jobs": ["^check_ee :: Run actions/checkout"]},
   {"repo": "windmill-labs/windmill", "workflow_id": 45664283, "branch": null, "enabled": true, "exclude_jobs": []},
   {"repo": "sharkdp/fd", "workflow_id": 11202521, "branch": null, "enabled": true, "exclude_jobs": ["^Publish to Winget$"]},

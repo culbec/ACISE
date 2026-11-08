@@ -113,6 +113,34 @@ def test_clone_all_branches_fetches_pr_heads(repo, tmp_path, monkeypatch):
     assert refs(d) == want and gc.default_branch(d) == "main"
 
 
+def test_fetch_heads_by_sha(repo, tmp_path, monkeypatch):
+    r, (c1, *_) = repo
+    git(r, "checkout", "-q", "-b", "gone")
+    gone = commit(r, "pushed then replaced", {"g.py": "1\n"})
+    git(r, "checkout", "-q", "main")
+    remote = tmp_path / "remote" / "o"
+    remote.mkdir(parents=True)
+    git(remote, "clone", "-q", "--bare", str(r), "r")
+    git(
+        remote / "r", "update-ref", "-d", "refs/heads/gone"
+    )  # unreferenced, still served
+    git(remote / "r", "config", "uploadpack.allowAnySHA1InWant", "true")
+    # file:// makes the clone go through the transport: reachable objects only
+    monkeypatch.setattr(gc, "REMOTE_ROOT", f"file://{tmp_path / 'remote'}")
+    monkeypatch.setattr(gh_runs, "RAW_ROOT", tmp_path / "raw")
+    d = gc.clone("o/r", "main")
+    assert gc._missing(d, [gone, c1]) == [gone]
+    # present SHAs are skipped; an unknown SHA does not stop the others
+    assert gc.fetch_heads(d, [gone, c1, "f" * 40, "not-a-sha"]) == 1
+    assert git(d, "rev-parse", f"refs/ci/{gone}") == gone
+    assert git(d, "for-each-ref", "--format=%(refname)", "refs/ci").split() == [
+        f"refs/ci/{gone}"
+    ]
+    parents, _, subject, reverts = gc.commit_info(d, gone)
+    assert (len(parents), subject, reverts) == (1, "pushed then replaced", None)
+    assert gc.fetch_heads(d, [gone]) == 0  # nothing left to fetch
+
+
 def test_revert_link(repo):
     r, (*_, merge) = repo
     git(r, "revert", "--no-edit", "HEAD~1")  # reverts c3 (README)
@@ -160,3 +188,13 @@ def test_classify(path, kind):
 )
 def test_rename_keeps_new_path(raw, new):
     assert gc._new_path(raw) == new
+
+
+def test_first_parent_on_finds_the_fork_point(repo):
+    r, (_, c2, c3, _) = repo
+    line = set(gc.commit_log(r, "main")["sha"])
+    f1 = git(r, "rev-parse", "feature")
+    assert f1 not in line  # reached from main only through the merge's 2nd parent
+    assert gc.first_parent_on(r, f1, line) == c2
+    assert gc.first_parent_on(r, c3, line) == c3
+    assert gc.first_parent_on(r, "f" * 40, line) is None

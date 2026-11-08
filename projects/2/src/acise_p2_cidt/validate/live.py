@@ -16,7 +16,7 @@ from acise_p2_cidt.collect import http
 from acise_p2_cidt.collect.gh_runs import fetch_details, fetch_windows
 from acise_p2_cidt.collect.targets import Target
 from acise_p2_cidt.data.build import build
-from acise_p2_cidt.data.load import LABEL_COL, PREV_LABEL_COL, load
+from acise_p2_cidt.data.load import LABEL_COL, PREV_LABEL_COL, in_t2, load
 from acise_p2_cidt.data.load import Target as Label
 from acise_p2_cidt.metrics.metrics import domain, scores
 from acise_p2_cidt.training.cv import Fold, prepare
@@ -202,8 +202,8 @@ def _X(df: pd.DataFrame, sidecar: dict) -> pd.DataFrame:
 
 
 def _in_target(df: pd.DataFrame, target: str) -> pd.Series:
-    # T2 holds only runs whose previous completed run passed, as in `load`.
-    return df[PREV_LABEL_COL] == 0 if target == "T2" else pd.Series(True, df.index)
+    # same T2 rule as `load`
+    return in_t2(df) if target == "T2" else pd.Series(True, df.index)
 
 
 def retest(path: pathlib.Path) -> pd.DataFrame:

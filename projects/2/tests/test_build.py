@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from acise_p2_cidt.collect import gh_runs
-from acise_p2_cidt.collect.targets import Target, slug
+from acise_p2_cidt.collect.targets import Target, TargetConfig, slug
 from acise_p2_cidt.data import build, load
 from acise_p2_cidt.data.build import history_features
 
@@ -141,7 +141,7 @@ def raw(tmp_path, monkeypatch):
         c = t0 + i * 1000 + 10
         return {
             "id": 100 + i, "run_attempt": attempt, "status": status, "conclusion": conclusion,
-            "head_sha": shas[i], "created_at": _iso(c), "run_started_at": _iso(c + 5),
+            "event": "push", "head_branch": "main", "head_sha": shas[i], "created_at": _iso(c), "run_started_at": _iso(c + 5),
             "updated_at": _iso(c + end), "path": ".github/workflows/ci.yml",
             "actor": {"login": LOGIN, "type": "User"},
             "head_commit": {"timestamp": _iso(c - 10), "author": {"email": EMAIL}},
@@ -223,3 +223,104 @@ def test_build_end_to_end(raw):
 )  # fmt: skip
 def test_lineage(run, expected):
     assert build.lineage(run) == expected
+
+
+def _extra(i, event="push", conclusion="failure", **kw):
+    """A raw run added through `extra`, based on the first cached run."""
+    r = gh_runs.cached_runs(T)[0]
+    r |= {"id": 200 + i, "event": event, "conclusion": conclusion,
+          "updated_at": r["run_started_at"]}  # fmt: skip
+    return r | kw
+
+
+def _jobs(d, rid, *jobs):
+    gh_runs._write_json(d / "jobs" / f"{rid}.json", {"jobs": [
+        {"name": n, "conclusion": "failure", "steps": [{"name": s, "conclusion": "failure"}]}
+        for n, s in jobs
+    ]})  # fmt: skip
+
+
+def test_drops_infra_and_unsupported_events(raw):
+    cfg = TargetConfig(T, True, ("^Result$", r"^unit :: Install"))
+    _jobs(raw, 201, ("Result", "Failure"))  # infra only
+    _jobs(raw, 202, ("Result", "Failure"), ("unit", "Run tests"))  # mixed: kept
+    _jobs(raw, 203, ("unit", "Install deps"))  # infra by its failed step
+    _jobs(raw, 204)  # no failed job: failed before testing the code
+    # 206 has no jobs file: kept, as its jobs were not collected
+    extra = [
+        _extra(1),
+        _extra(2),
+        _extra(3),
+        _extra(4),
+        _extra(5, "schedule"),
+        _extra(6),
+    ]
+    runs, dropped = build.runs_frame(cfg, b"salt", extra)
+    assert set(runs["run_id"]) & {201, 202, 203, 204, 205, 206} == {202, 206}
+    assert dropped == {"cancelled": 1, "infra_failure": 3, "event_schedule": 1,
+                       "no_jobs_kept": 1}  # fmt: skip
+    assert runs.set_index("run_id").loc[202, "failed_job_names"] == "Result|unit"
+
+
+def test_event_columns_and_fork(raw):
+    fork = _extra(1, "pull_request", "success", head_branch="fix",
+                  head_repository={"full_name": "Someone/Name"})  # fmt: skip
+    same = _extra(2, "pull_request", "success", head_branch="fix2",
+                  head_repository={"full_name": "OWNER/name"})  # fmt: skip
+    runs, _ = build.runs_frame(T, b"salt", [fork, same])
+    r = runs.set_index("run_id")
+    assert r.loc[
+        201, ["event_pull_request", "event_push", "event_merge_group"]
+    ].tolist() == [1, 0, 0]
+    assert (
+        r.loc[201, "from_fork"],
+        r.loc[202, "from_fork"],
+        r.loc[100, "from_fork"],
+    ) == (1, 0, 0)
+    assert r.loc[201, "lineage"] == "head:Someone/Name:fix"
+
+
+def test_pr_change_is_the_whole_branch(raw):
+    repo = gh_runs.repo_root(T.repo) / "repo.git"
+    shas = _git(repo, "rev-list", "--reverse", "main").split()
+    _git(repo, "checkout", "-q", "-b", "feat", shas[1])
+    for name, text in (("b.py", "1\n2\n3\n"), ("c.py", "x\n")):
+        (repo / name).write_text(text)
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-q", "-m", name)
+    head = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "checkout", "-q", "main")
+    created = 1_767_225_600 + 3500  # after main's c3: the base as of the run is c3
+    pr = _extra(10, "pull_request", "success", head_sha=head, head_branch="feat",
+                pull_requests=[], head_repository={"full_name": "owner/name"},
+                created_at=_iso(created), run_started_at=_iso(created + 5),
+                updated_at=_iso(created + 100))  # fmt: skip
+    # a second, passing run of the same PR once the first (failed) one is known
+    again = pr | {
+        "id": 211,
+        "conclusion": "success",
+        "created_at": _iso(created + 1000),
+        "run_started_at": _iso(created + 1005),
+        "updated_at": _iso(created + 1100),
+    }
+    df, schema = build.build(T, extra=[pr | {"conclusion": "failure"}, again])
+    row = df.set_index("run_id").loc[210]
+    # merge-base(c3, head) = c1: the diff covers both branch commits, nothing of main
+    assert (row["files_changed"], row["additions"], row["deletions"]) == (2, 4, 0)
+    assert row["file_prior_changes"] == 0  # both files are new
+    assert row["lineage_first_run"] == 1 and np.isnan(row["prev_failed"])
+    # the PR's own files, not the default branch's, feed the file history
+    nxt = df.set_index("run_id").loc[211]
+    assert nxt["prev_failed"] == 1 and nxt["file_fail_prob_max"] == 1.0
+    assert nxt["overlap_with_last_failed_run"] == 1.0
+    assert (
+        row["is_default_branch"] == 0
+        and df.set_index("run_id").loc[100, "is_default_branch"] == 1
+    )
+    assert {"event_pull_request", "from_fork", "lineage_first_run"} <= set(
+        schema["feature_cols"]
+    )
+    assert "lineage" in schema["id_cols"] and "event" in schema["diagnostic_cols"]
+    assert schema["target_slug"] == slug(T) and schema["events"] == sorted(
+        gh_runs.EVENTS
+    )

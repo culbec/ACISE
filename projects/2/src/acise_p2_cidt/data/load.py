@@ -7,13 +7,14 @@ from typing import Literal
 import numpy as np
 import pandas as pd
 
-# T1: all runs. T2: runs whose previous completed run passed (first failures).
+# T1: all runs. T2: runs whose previous completed run of the same PR or branch
+# passed, or that have none (first failures).
 Target = Literal["T1", "T2"]
 
 # Fixed by data/build.py for every repository, so they are constants, not schema.
 ORDER_COL: str = "created_at"
 LABEL_COL: str = "failed"
-PREV_LABEL_COL: str = "prev_failed"  # 1 = the previous completed run failed
+PREV_LABEL_COL: str = "prev_failed"  # 1 = the lineage's previous completed run failed
 
 # Share of the earliest rows used for EDA and feature selection only.
 DEV_FRACTION: float = 0.2
@@ -43,6 +44,14 @@ def schema_path(slug: str) -> pathlib.Path:
     return SCHEMA_DIR / f"schema_{slug}.json"
 
 
+def in_t2(df: pd.DataFrame) -> pd.Series:
+    """
+    T2 membership: the previous run passed, or there is none. A PR's first run
+    continues no known failure, so it stays.
+    """
+    return df[PREV_LABEL_COL] != 1
+
+
 def available_targets() -> list[str]:
     """
     Targets with a built table.
@@ -59,7 +68,7 @@ def load(slug: str, target: Target, until: datetime | None = None) -> Dataset:
 
     Args:
         slug (str): target slug, e.g. "n8n-io__n8n__33323319@master".
-        target (Target): T1 = all runs; T2 = runs whose previous run passed.
+        target (Target): T1 = all runs; T2 = `in_t2` runs.
         until (datetime | None): keep runs created at or before it (naive = UTC);
             None keeps all.
 
@@ -81,13 +90,13 @@ def load(slug: str, target: Target, until: datetime | None = None) -> Dataset:
     if until is not None:
         cut = pd.Timestamp(until)
         df = df[df[ORDER_COL] <= (cut if cut.tzinfo else cut.tz_localize(UTC))]
-    if target == "T2":  # first failures; NaN (the first run) has no previous run
-        df = df[df[PREV_LABEL_COL] == 0]
+    if target == "T2":
+        df = df[in_t2(df)]
     df = df.reset_index(drop=True)
 
     features = list(schema["feature_cols"])
     if target == "T2":
-        features.remove(PREV_LABEL_COL)  # constant on T2
+        features.remove(PREV_LABEL_COL)  # 0 or NaN on T2, as `lineage_first_run`
     n_dev = int(len(df) * DEV_FRACTION)  # cut after the T2 filter, as in project 1
     y = df[LABEL_COL].astype(int).rename("failed")
     meta = schema | {
