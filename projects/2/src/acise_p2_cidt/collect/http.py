@@ -71,11 +71,17 @@ def get(path: str, params: dict | None = None) -> Any:
         Any: decoded JSON body.
     """
     global calls
-    for attempt in range(MAX_TRIES):
+    attempt = 0
+    while attempt < MAX_TRIES:
         try:
             resp = _session().get(f"{API}{path}", params=params, timeout=TIMEOUT)
-        except (requests.ConnectionError, requests.Timeout) as e:
+            # Decoded here so a truncated or garbled body is retried too.
+            body = resp.json() if resp.ok else None
+        except requests.RequestException as e:
+            # ConnectionError, Timeout, ChunkedEncodingError (IncompleteRead),
+            # ContentDecodingError, JSONDecodeError.
             _sleep(2**attempt, f"{type(e).__name__} on {path}")
+            attempt += 1
             continue
         calls += 1
 
@@ -85,11 +91,14 @@ def get(path: str, params: dict | None = None) -> Any:
         if resp.headers.get("X-RateLimit-Remaining") == "0":
             reset = float(resp.headers.get("X-RateLimit-Reset", time.time()))
             _sleep(max(reset - time.time(), 0.0) + 1.0, "rate limit")
+            if not resp.ok:
+                continue  # waited for the limit to reset: no try used
         elif not resp.ok:
             wait = float(resp.headers.get("Retry-After", 2 ** (attempt + 1)))
             _sleep(wait, f"HTTP {resp.status_code} on {path}")
         if resp.ok:
-            return resp.json()
+            return body
+        attempt += 1
     raise RuntimeError(f"giving up on {path} after {MAX_TRIES} tries")
 
 

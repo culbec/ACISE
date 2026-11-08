@@ -1,7 +1,9 @@
 import functools
+import os
 import pathlib
 import re
 import subprocess
+import time
 from collections.abc import Container
 from typing import Literal
 
@@ -56,6 +58,10 @@ LOG_COLS: list[str] = [
 logger = get_logger(__name__)
 
 
+# Never wait on a credential prompt: fail instead.
+_ENV: dict[str, str] = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+
+
 def _git(repo_dir: pathlib.Path, *args: str, stdin: str | None = None) -> str:
     return subprocess.run(
         ["git", "-C", str(repo_dir), "-c", "core.quotePath=false", *args],
@@ -63,7 +69,42 @@ def _git(repo_dir: pathlib.Path, *args: str, stdin: str | None = None) -> str:
         check=True,
         capture_output=True,
         text=True,
+        env=_ENV,
     ).stdout
+
+
+NET_TRIES: int = 5
+# stderr of a fetch the remote cannot serve: retrying will not help.
+_GONE: tuple[str, ...] = ("not our ref", "couldn't find remote ref", "no such remote ref")
+
+
+def _git_net(repo_dir: pathlib.Path, *args: str) -> str:
+    """
+    `_git` for commands that talk to the remote: retries dropped connections
+    (early EOF, RPC failed, hung up) and stalled transfers (under 1 KB/s for 60s)
+    with exponential backoff. A ref or SHA the remote does not have fails at once.
+    A lock left by an interrupted git raises `RuntimeError`, so callers that skip
+    missing SHAs do not swallow it.
+    """
+    for attempt in range(NET_TRIES):
+        try:
+            return _git(repo_dir, "-c", "http.lowSpeedLimit=1000",
+                        "-c", "http.lowSpeedTime=60", *args)  # fmt: skip
+        except subprocess.CalledProcessError as e:
+            err = (e.stderr or "").strip()
+            last = err.splitlines()[-1] if err else f"exit {e.returncode}"
+            if lock := next(
+                (ln for ln in err.splitlines() if "file exists" in ln.lower()), None
+            ):
+                raise RuntimeError(
+                    f"{repo_dir}: stale lock from an interrupted git, delete the "
+                    f"*.lock it names if no other git runs there: {lock}"
+                ) from e
+            if attempt == NET_TRIES - 1 or any(g in err.lower() for g in _GONE):
+                raise
+            logger.warning("git %s: %s: retrying in %ds", args[0], last, 2**attempt)
+            time.sleep(2**attempt)
+    raise AssertionError("unreachable")
 
 
 REMOTE_ROOT: str = "https://github.com"
@@ -93,13 +134,13 @@ def clone(repo: str, branch: str | None) -> pathlib.Path:
     if not dest.exists():
         dest.parent.mkdir(parents=True, exist_ok=True)
         one = ["--single-branch", "-b", branch] if branch else []
-        _git(dest.parent, "clone", "--bare", *one, f"{REMOTE_ROOT}/{repo}", dest.name)
+        _git_net(dest.parent, "clone", "--bare", *one, f"{REMOTE_ROOT}/{repo}", dest.name)
         if branch:
             return dest
     if branch:
-        _git(dest, "fetch", "origin", f"+{branch}:{branch}")
+        _git_net(dest, "fetch", "origin", f"+{branch}:{branch}")
     else:
-        _git(dest, "fetch", "origin", *_ALL_REFS, "--prune")
+        _git_net(dest, "fetch", "origin", *_ALL_REFS, "--prune")
     return dest
 
 
@@ -164,13 +205,13 @@ def fetch_heads(repo_dir: pathlib.Path, shas: list[str]) -> int:
     for i in range(0, len(missing), FETCH_BATCH):
         batch = missing[i : i + FETCH_BATCH]
         try:
-            _git(repo_dir, "fetch", "-q", "--no-tags", "origin",
+            _git_net(repo_dir, "fetch", "-q", "--no-tags", "origin",
                  *(f"{h}:refs/ci/{h}" for h in batch))  # fmt: skip
         except subprocess.CalledProcessError:
             # one unknown SHA fails the whole batch: retry the rest one by one
             for h in batch:
                 try:
-                    _git(
+                    _git_net(
                         repo_dir,
                         "fetch",
                         "-q",
