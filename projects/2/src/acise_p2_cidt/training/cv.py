@@ -25,6 +25,9 @@ logger = get_logger(__name__)
 
 # Below this many failures a test fold gives unstable recall/MCC.
 MIN_TEST_FAILURES = 10
+# Scores of the fail class. A source's slice of a fold can hold no failure; there
+# they are undefined, so its row gets NaN and per-source means skip it.
+FAIL_CLASS_SCORES = ("precision", "recall", "tpr", "f1", "mcc", "pct_failures_caught")
 
 
 def _imputer() -> SimpleImputer:
@@ -80,15 +83,17 @@ def folds(ds: Dataset, n_splits: int = 5, val_frac: float = 0.2) -> list[Fold]:
     every train, and the last ``val_frac`` of train is the inner validation split.
 
     Args:
-        ds (Dataset): loaded dataset of one repository.
+        ds (Dataset): loaded dataset, one source or a pool.
         n_splits (int): number of test folds.
         val_frac (float): share of each train used as validation.
 
     Returns:
         list[Fold]: chronological folds.
     """
-    if not ds.meta.get("repo"):
-        raise ValueError(f"one repo per CV run, got {ds.meta.get('repo')!r}")
+    if not ds.meta.get("dataset"):
+        raise ValueError(
+            "the dataset has no name (meta['dataset']); load it with `load`"
+        )
     dev = np.flatnonzero(ds.dev_mask)
     rest = np.flatnonzero(~ds.dev_mask)
     if dev.size and rest.size and dev.max() > rest.min():
@@ -153,6 +158,19 @@ def dev_split(ds: Dataset, features: list[str], val_frac: float = 0.2) -> Split:
     return prepare(ds, features, Fold(-1, dev[:cut], dev[cut:], dev[cut:]))
 
 
+def _row(method: str, k: int, source: str, y: pd.Series, pred: np.ndarray) -> dict:
+    """One result row: the scores of ``pred`` on the test rows ``y``."""
+    return {
+        "method": method,
+        "fold": k,
+        "source": source,
+        "n_test": len(y),
+        "n_fail": int(y.sum()),
+        **scores(y, pred),
+        **domain(y, pred),
+    }
+
+
 def run_cv(
     ds: Dataset,
     features: list[str],
@@ -168,10 +186,14 @@ def run_cv(
     shows a progress bar over the folds; DEBUG adds the scores of each fold.
 
     Returns:
-        tuple: one row per fold (method, fold, n_test, n_fail, every ``scores`` and
-            ``domain`` key), and the payloads keyed by fold.
+        tuple: one row per fold with ``source = "all"`` (method, fold, source, n_test,
+            n_fail, every ``scores`` and ``domain`` key), plus, when the dataset has
+            several sources, one row per fold and source scored on that source's test
+            rows (fail-class scores NaN when the slice has no failure); and the
+            payloads keyed by fold.
     """
     fold_list = folds(ds, n_splits)
+    per_source = ds.source is not None and ds.source.nunique() > 1
     rows, payloads = [], {}
     bar = Progress(
         TextColumn("{task.description}"),
@@ -196,15 +218,16 @@ def run_cv(
             bar.update(task, description=name)
             out = fit_predict(split)
             res = out if isinstance(out, Result) else Result(out)
-            row = {
-                "method": method,
-                "fold": fold.k,
-                "n_test": len(fold.test),
-                "n_fail": n_fail,
-                **scores(y_test, res.pred),
-                **domain(y_test, res.pred),
-            }
+            row = _row(method, fold.k, "all", y_test, res.pred)
             rows.append(row)
+            if per_source:
+                src = ds.source.iloc[fold.test].to_numpy()  # pyright: ignore[reportOptionalMemberAccess]
+                for s in sorted(set(src)):
+                    m = src == s
+                    part = _row(method, fold.k, s, y_test[m], np.asarray(res.pred)[m])
+                    if part["n_fail"] == 0:
+                        part |= dict.fromkeys(FAIL_CLASS_SCORES, np.nan)
+                    rows.append(part)
             logger.debug(
                 f"{name}: mcc {row['mcc']:.3f}, "
                 f"recall {row['recall']:.3f}, precision {row['precision']:.3f}"

@@ -10,6 +10,7 @@ from acise_p2_cidt.metrics.metrics import (
     confusion,
     domain,
     majority,
+    mcc,
     parrot,
     scores,
 )
@@ -68,3 +69,16 @@ def test_majority():
     assert majority(split).tolist() == [True] * 4
     split.y_fit = np.array([1, 0])  # tie predicts pass
     assert majority(split).tolist() == [False] * 4
+
+
+def test_mcc_matches_sklearn_without_warning():
+    import warnings
+
+    from sklearn.metrics import matthews_corrcoef
+
+    rng = np.random.default_rng(0)
+    y, p = rng.random(50) < 0.3, rng.random(50) < 0.4
+    assert mcc(y, p) == pytest.approx(matthews_corrcoef(y, p))
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert mcc([0, 0, 0], [0, 0, 0]) == 0.0  # one class only

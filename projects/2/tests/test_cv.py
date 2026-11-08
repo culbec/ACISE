@@ -22,7 +22,7 @@ def dataset(n=400, fail_rate=0.5, seed=0):
     )
     X.loc[::7, "a"] = np.nan
     dev = np.arange(n) < n // 5
-    meta = {"repo": "owner/name", "target": "T1"}
+    meta = {"dataset": "owner__name__1", "target": "T1"}
     order = pd.Series(pd.date_range("2026-01-01", periods=n, freq="h"))
     return Dataset(X=X, y=y, dev_mask=dev, meta=meta, order=order)
 
@@ -42,9 +42,9 @@ def test_fold_properties():
         prev_train = len(f.train)
 
 
-def test_no_repo_rejected():
+def test_no_dataset_rejected():
     ds = dataclasses.replace(dataset(), meta={"target": "T1"})
-    with pytest.raises(ValueError, match="one repo"):
+    with pytest.raises(ValueError, match="dataset"):
         folds(ds)
 
 
@@ -91,3 +91,33 @@ def test_run_cv_one_row_per_fold():
     assert len(df) == 5 and sorted(payloads) == [0, 1, 2, 3, 4]
     assert payloads[0] < payloads[4]  # expanding window
     assert (df["pct_builds_saved"] == 100).all()
+
+
+def test_run_cv_single_source_is_all():
+    df, _ = run_cv(dataset(), ["a", "b"], majority, "majority")
+    assert (df["source"] == "all").all()
+
+
+def test_run_cv_per_source_rows():
+    ds = dataset()
+    source = pd.Series(np.where(np.arange(len(ds.y)) % 3 == 0, "s1", "s2"))
+    ds = dataclasses.replace(ds, source=source)
+    df, _ = run_cv(ds, ["a", "b"], majority, "majority")
+    assert len(df) == 5 * 3 and set(df["source"]) == {"all", "s1", "s2"}
+    pooled = df[df["source"] == "all"].set_index("fold")
+    parts = df[df["source"] != "all"].groupby("fold")[["n_test", "n_fail"]].sum()
+    pd.testing.assert_frame_equal(parts, pooled[["n_test", "n_fail"]])
+    # each slice is scored on its own rows only
+    assert (df.loc[df["source"] == "s1", "n_test"] < pooled["n_test"].to_numpy()).all()
+
+
+def test_per_source_without_failures_is_nan():
+    ds = dataset()
+    source = pd.Series(np.where(np.arange(len(ds.y)) % 3 == 0, "s1", "s2"))
+    y = ds.y.where(source != "s1", 0)  # s1 never fails
+    ds = dataclasses.replace(ds, y=y, source=source)
+    df, _ = run_cv(ds, ["a", "b"], majority, "majority")
+    s1 = df[df["source"] == "s1"]
+    assert s1[["mcc", "recall", "f1", "precision"]].isna().all().all()
+    assert s1["accuracy"].notna().all() and (s1["n_test"] > 0).all()
+    assert df.loc[df["source"] != "s1", "mcc"].notna().all()

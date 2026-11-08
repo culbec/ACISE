@@ -39,17 +39,18 @@ class Selection:
         """
         return len(self.features)
 
-    def save(self, out_dir: pathlib.Path = OUT_DIR) -> pathlib.Path:
+    def save(self, out_dir: pathlib.Path | None = None) -> pathlib.Path:
         """
         Writes the selected features, according to target class, per repository,
         in the directory specified by `out_dir` as a JSON file.
 
         Args:
-            out_dir (pathlib.Path): out directory.
+            out_dir (pathlib.Path | None): out directory; None = `OUT_DIR`.
 
         Returns:
             pathlib.Path: JSON file path.
         """
+        out_dir = OUT_DIR if out_dir is None else out_dir
         out_dir.mkdir(parents=True, exist_ok=True)
         path = out_dir / _file_name(self.meta["target"], self.meta["dataset"])
         path.write_text(
@@ -75,7 +76,7 @@ def _file_name(target: str, dataset: str) -> str:
 
 
 def load_features(
-    target: str, dataset: str, out_dir: pathlib.Path = OUT_DIR
+    target: str, dataset: str, out_dir: pathlib.Path | None = None
 ) -> list[str]:
     """
     Reads the frozen feature list written by `Selection.save`.
@@ -83,11 +84,13 @@ def load_features(
     Args:
         target (str): "T1" or "T2".
         dataset (str): `Dataset.meta["dataset"]`, e.g. a target slug.
-        out_dir (pathlib.Path): directory holding the JSON files.
+        out_dir (pathlib.Path | None): directory holding the JSON files; None =
+            `OUT_DIR`.
 
     Returns:
         list[str]: selected features, ordered by relevance; N = its length.
     """
+    out_dir = OUT_DIR if out_dir is None else out_dir
     return json.loads((out_dir / _file_name(target, dataset)).read_text())["features"]
 
 
@@ -406,6 +409,7 @@ def select_features(
         meta={
             "target": ds.meta["target"],
             "dataset": ds.meta["dataset"],
+            "sources": ds.meta.get("sources", []),
             "dev_rows": len(X),
             "dev_failed": int(y.sum()),
             "excluded": list(exclude),

@@ -46,7 +46,7 @@ def test_pipeline_with_stand_in_models():
         X,
         y,
         np.arange(n) < n // 5,
-        {"repo": "owner/name"},
+        {"dataset": "owner__name__1"},
         pd.Series(pd.date_range("2026-01-01", periods=n, freq="h")),
     )
 

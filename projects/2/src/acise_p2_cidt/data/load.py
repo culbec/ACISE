@@ -1,3 +1,4 @@
+import hashlib
 import json
 import pathlib
 from dataclasses import dataclass
@@ -32,6 +33,7 @@ class Dataset:
     dev_mask: np.ndarray  # True on the first DEV_FRACTION of rows
     meta: dict  # schema.json content + dataset, target, n_rows, n_failed, n_dev
     order: pd.Series  # created_at per row, for plots and the retest cut
+    source: pd.Series | None = None  # target slug per row
 
 
 def table_path(slug: str) -> pathlib.Path:
@@ -52,6 +54,14 @@ def in_t2(df: pd.DataFrame) -> pd.Series:
     return df[PREV_LABEL_COL] != 1
 
 
+def pool_name(slugs: list[str]) -> str:
+    """
+    File key of a pool. It depends only on the set of slugs, so a changed target
+    list gets new artefacts instead of overwriting the old ones.
+    """
+    return "pool-" + hashlib.sha256("\n".join(sorted(slugs)).encode()).hexdigest()[:8]
+
+
 def available_targets() -> list[str]:
     """
     Targets with a built table.
@@ -62,30 +72,53 @@ def available_targets() -> list[str]:
     return sorted(p.stem for p in PROCESSED_DIR.glob("*.csv"))
 
 
-def load(slug: str, target: Target, until: datetime | None = None) -> Dataset:
-    """
-    Loads a built table as a `Dataset`. Stateless: nothing is fitted here.
-
-    Args:
-        slug (str): target slug, e.g. "n8n-io__n8n__33323319@master".
-        target (Target): T1 = all runs; T2 = `in_t2` runs.
-        until (datetime | None): keep runs created at or before it (naive = UTC);
-            None keeps all.
-
-    Returns:
-        Dataset: chronological features, label, dev mask, schema and order.
-    """
-    if target not in ("T1", "T2"):
-        raise ValueError(f"target must be 'T1' or 'T2', got {target!r}")
+def _read(slug: str) -> tuple[pd.DataFrame, dict]:
+    """One built table, with `created_at` parsed and a `source` column, and its schema."""
     path, sp = table_path(slug), schema_path(slug)
     if not path.is_file() or not sp.is_file():
         raise FileNotFoundError(
             f"no built table for {slug!r} ({path}); run `build-dataset --target {slug}`"
         )
-    schema = json.loads(sp.read_text())
     df = pd.read_csv(path)
     df[ORDER_COL] = pd.to_datetime(df[ORDER_COL], utc=True, format="ISO8601")
-    df = df.sort_values(ORDER_COL, kind="stable")
+    return df.assign(source=slug), json.loads(sp.read_text())
+
+
+def load(
+    targets: str | list[str], target: Target, until: datetime | None = None
+) -> Dataset:
+    """
+    Loads one built table, or several pooled into one chronological table, as a
+    `Dataset`. Stateless: nothing is fitted here.
+
+    Args:
+        targets (str | list[str]): a target slug, e.g. "n8n-io__n8n__33323319@master",
+            or a list of slugs to pool.
+        target (Target): T1 = all runs; T2 = `in_t2` runs.
+        until (datetime | None): keep runs created at or before it (naive = UTC);
+            None keeps all.
+
+    Returns:
+        Dataset: chronological features, label, dev mask, schema, order and source.
+            A pool's `meta` keeps only the schema keys equal in every source.
+
+    Raises:
+        ValueError: the sources' feature columns differ.
+    """
+    if target not in ("T1", "T2"):
+        raise ValueError(f"target must be 'T1' or 'T2', got {target!r}")
+    slugs = [targets] if isinstance(targets, str) else list(targets)
+    if not slugs:
+        raise ValueError("no target slug given")
+    parts = [_read(s) for s in slugs]
+    schemas = [sc for _, sc in parts]
+    for s, sc in zip(slugs, schemas):
+        if sc["feature_cols"] != schemas[0]["feature_cols"]:
+            raise ValueError(f"feature columns of {s!r} differ from {slugs[0]!r}")
+    # ties broken by source and run id, so the pooled order is reproducible
+    df = pd.concat([d for d, _ in parts], ignore_index=True).sort_values(
+        [ORDER_COL, "source", "run_id"], kind="stable"
+    )
 
     if until is not None:
         cut = pd.Timestamp(until)
@@ -94,17 +127,33 @@ def load(slug: str, target: Target, until: datetime | None = None) -> Dataset:
         df = df[in_t2(df)]
     df = df.reset_index(drop=True)
 
-    features = list(schema["feature_cols"])
+    features = list(schemas[0]["feature_cols"])
     if target == "T2":
         features.remove(PREV_LABEL_COL)  # 0 or NaN on T2, as `lineage_first_run`
     n_dev = int(len(df) * DEV_FRACTION)  # cut after the T2 filter, as in project 1
     y = df[LABEL_COL].astype(int).rename("failed")
+    if isinstance(targets, str):
+        schema, dataset = schemas[0], targets
+    else:
+        schema = {
+            k: v for k, v in schemas[0].items() if all(sc.get(k) == v for sc in schemas)
+        }
+        dataset = pool_name(slugs)
+    by_source = y.groupby(df["source"])
     meta = schema | {
-        "dataset": slug,  # file key of artefacts derived from this data
+        "dataset": dataset,  # file key of artefacts derived from this data
         "target": target,
         "n_rows": len(df),
         "n_failed": int(y.sum()),
         "n_dev": n_dev,
+        "sources": slugs,
+        "per_source": {
+            s: {
+                "n_rows": int(by_source.size().get(s, 0)),
+                "n_failed": int(by_source.sum().get(s, 0)),
+            }
+            for s in slugs
+        },
     }
     return Dataset(
         X=df[features].astype(float),
@@ -112,4 +161,5 @@ def load(slug: str, target: Target, until: datetime | None = None) -> Dataset:
         dev_mask=np.arange(len(df)) < n_dev,
         meta=meta,
         order=df[ORDER_COL],
+        source=df["source"],
     )

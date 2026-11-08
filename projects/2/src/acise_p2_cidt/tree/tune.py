@@ -3,8 +3,8 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import matthews_corrcoef
 
+from acise_p2_cidt.metrics.metrics import mcc as matthews_corrcoef
 from acise_p2_cidt.training.cv import Result, Split
 from acise_p2_cidt.tree.cart import CART
 from acise_p2_cidt.utils.logging.log import get_logger
@@ -79,18 +79,20 @@ def _tune_point(split: Split, params: dict) -> tuple[Choice, CART]:
     return Choice(params, alpha, threshold, mcc), tree
 
 
-def grid_search(split: Split, grid: dict = GRID) -> tuple[Choice, pd.DataFrame]:
+def grid_search(split: Split, grid: dict | None = None) -> tuple[Choice, pd.DataFrame]:
     """
     Every grid point, scored on validation MCC after pruning and threshold tuning.
 
     Args:
         split (Split): fold; `X_test` is not read.
-        grid (dict): CART parameter name -> values.
+        grid (dict | None): CART parameter name -> values; None = `GRID`, read at
+            call time.
 
     Returns:
         tuple[Choice, pd.DataFrame]: best choice (first in grid order on ties) and
             one row per grid point.
     """
+    grid = GRID if grid is None else grid
     rows, best = [], None
     for values in itertools.product(*grid.values()):
         choice, tree = _tune_point(split, dict(zip(grid, values)))

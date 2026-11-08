@@ -188,6 +188,7 @@ def _print(name: str, s: dict) -> None:
     for row in s["top_jobs"].itertuples():
         t.add_row(row.job, row.failed_step, str(row.n_runs), f"{row.coverage:.0%}")
     log.print(t)
+    log.print(f"{name}: label summary (failure rate, infra share, T2 failures, flaky rate)")
     log.print({k: v for k, v in s.items() if k != "top_jobs"})
 
 

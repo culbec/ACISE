@@ -15,8 +15,9 @@ Code-level companion to [plan.md](plan.md), which implements [SPEC.md](SPEC.md).
 | 7 | §7 Pooled load and CV | `data/load.py`, `training/cv.py` | 6 |
 | 8 | §9 Live and sandbox | `validate/live.py`, `validate/sandbox.py` (new) | 8, 9 |
 | 9 | §11 Mock data, notebook harness, notebooks | `tests/mock_pool.py`, `tests/nb_harness.py`, `tests/test_notebooks.py` (new), `notebook/*.ipynb` | plan §5 |
+| 10 | Sec. 12 ASCII cleanup | every file in the scope of Sec. 12, `tests/test_ascii.py` (new) | 10 |
 
-Order: 1 → 2 → (3, 4) → 5 → 6 → 7 → 8. `tests/mock_pool.py` is written with unit 1 and extended by each later unit, because every unit tests on it. The notebooks are edited in steps N1–N6, each right after the unit it calls (plan §5.2); `tests/nb_harness.py` and `tests/test_notebooks.py` come with N1, after unit 4. Sections 3 and 4 are independent. Every file stays under 500 lines. `build.py` and `history.py` are near 300 lines, so the lineage helpers go to a new `data/lineage.py` if either file would pass 450.
+Order: 1 → 2 → (3, 4) → 5 → 6 → 7 → 8, then 10 once the project is complete. New and edited text in every unit is ASCII-only (plan, ASCII rule); unit 10 cleans what was written before. `tests/mock_pool.py` is written with unit 1 and extended by each later unit, because every unit tests on it. The notebooks are edited in steps N1–N6, each right after the unit it calls (plan §5.2); `tests/nb_harness.py` and `tests/test_notebooks.py` come with N1, after unit 4. Sections 3 and 4 are independent. Every file stays under 500 lines. `build.py` and `history.py` are near 300 lines, so the lineage helpers go to a new `data/lineage.py` if either file would pass 450.
 
 New CLIs, registered in `pyproject.toml` `[project.scripts]`: `label-check = "acise_p2_cidt.analysis.labels:main"`, `sandbox-report = "acise_p2_cidt.validate.sandbox:main"`.
 
@@ -277,8 +278,9 @@ run_notebook(path: pathlib.Path, stubs: dict[str, Callable], skip_tags=("live",)
 ```
 
 - It reads the notebook with `nbformat` (already in the venv through `jupyter`), with no kernel, so it is fast and debuggable.
-- The namespace gets `display = lambda *a, **k: None`.
-- `plots.save` is patched to return the figure without writing a PNG.
+- The namespace gets a checking `display` stub instead of the no-op. It renders nothing and enforces the display rule (plan): a call that shows a non-text object (`DataFrame`, `Series`, `Styler`, a figure, a `dict` or `list`) must pass a caption first, a non-empty `str` or `IPython.display.Markdown`, in the same call: `display(Markdown("**Runs per source (pooled T2)**"), df)`. Otherwise it raises `AssertionError` naming the object type.
+- `plots.save` is patched to return the figure without writing a PNG. The patch asserts a non-empty `fig.layout.title.text` (set with `px.*(title=...)` or `fig.update_layout(title=...)`). A figure passed to `display` is checked the same way.
+- Before a cell runs, its source is parsed with `ast`. A last statement that is a bare expression (other than a call) would render an object with no caption in Jupyter, so it fails the test.
 - `live` cells run against stubs of the drivers they call (`collect`, `build`, `live.retest`, `live.predict_run`, `fetch_windows`, `git.clone`). The stubs return mock-pool outputs. `http.get` is patched to raise, so a cell that reaches the network without a stub fails the test instead of calling GitHub.
 - Slow knobs are patched for the test only: `tune.GRID` and `forest.GRID` reduced to one point, forest `n_estimators = 5`. The notebook code is unchanged.
 - An error reports the notebook, the cell index and the cell's first line.
@@ -294,3 +296,35 @@ run_notebook(path: pathlib.Path, stubs: dict[str, Callable], skip_tags=("live",)
 - Cells are developed as plain code, run through `run_notebook` on a scratch copy, then written to the real notebook with `nbformat` (or the NotebookEdit tool), keeping the cell order of plan §5.3.
 - Edited code cells are saved with `outputs = []` and `execution_count = None`. Unchanged cells keep their outputs until the user re-runs.
 - Every cell keeps the notebook's style: imports in the setup cell, display through `display(...)`, figures through `plots.save(fig, "<notebook>_<name>")`, comments only for decisions.
+- Titles and captions name the data and the view, not the code: "Monthly failure rate per source (T1, all runs)", not "df2". Per-source variants of a pooled view repeat the pooled title with the source slug.
+- `Markdown` is imported in each notebook's setup cell (`from IPython.display import Markdown, display`).
+- CLI tables (`rich.table.Table`) pass `title=`; `labels.main` gets its titles in N4.
+
+## 12. ASCII cleanup (plan phase 10)
+
+Runs once, after N6. Refactoring only: no logic, data path or output value changes.
+
+Scope (files we write; data from GitHub is out of scope):
+- `projects/2/src/`, `projects/2/tests/`, `projects/2/scripts/`, `projects/2/config/`, `projects/2/pyproject.toml`, `projects/2/**/README*`.
+- `projects/2/notebook/*.ipynb`: cell sources only. Outputs are cleared or regenerated by the user, since they can hold data text.
+- `docs/specs/project-2/` and `docs/plans/projects/2/`.
+- Excluded: `data/`, `results/`, `.venv/`, lockfiles, recorded API fixtures under `tests/fixtures/` (they mirror GitHub payloads).
+
+Replacements (one table, applied by hand or by a throwaway script in the scratchpad, then reviewed in the diff):
+
+| Character | Replacement |
+|---|---|
+| em/en dash | `-` |
+| approximately | `~` |
+| greater/less or equal | `>=`, `<=` |
+| multiplication sign | `x` |
+| arrows | `->`, `<-` |
+| plus-minus | `+/-` |
+| section sign | `Sec.` |
+| subscript digits (A12) | plain digits |
+| curly quotes, ellipsis | `"`, `'`, `...` |
+| non-breaking space | space |
+
+Anything not in the table is rewritten case by case. A column name or registry key with non-ASCII would change the data contract; there is none today, and if one appears it is renamed together with a rebuild and recorded in the plan.
+
+`tests/test_ascii.py` (new, permanent): walks the scope above and fails on any byte above `0x7F`, naming file, line and character. For `.ipynb` it checks the cell sources only.

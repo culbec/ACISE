@@ -38,6 +38,16 @@ def _div(num: float, den: float) -> float:
     return num / den if den else 0.0
 
 
+def mcc(y_true, y_pred) -> float:
+    """
+    Matthews correlation of the fail class, from the confusion counts. 0 when a
+    margin is empty (one class only), as in sklearn, but without its warning.
+    """
+    tp, fp, tn, fn = confusion(y_true, y_pred)
+    den = float(np.sqrt(float(tp + fp) * (tp + fn) * (tn + fp) * (tn + fn)))
+    return _div(tp * tn - fp * fn, den)
+
+
 def scores(y_true, y_pred) -> dict[str, float]:
     """
     Reported classification scores on the fail class (sklearn), plus the raw counts.
@@ -60,7 +70,7 @@ def scores(y_true, y_pred) -> dict[str, float]:
         "precision": float(precision),
         "recall": float(recall),
         "f1": float(f1),
-        "mcc": float(skm.matthews_corrcoef(y_true, y_pred)),
+        "mcc": mcc(y_true, y_pred),
         "accuracy": float(skm.accuracy_score(y_true, y_pred)),
         "tpr": float(recall),
         "fpr": _div(c.fp, c.fp + c.tn),  # sklearn has no FPR scorer

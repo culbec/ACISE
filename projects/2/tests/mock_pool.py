@@ -10,9 +10,11 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
+from acise_p2_cidt.analysis import features
 from acise_p2_cidt.collect import gh_runs, targets
 from acise_p2_cidt.collect.targets import Target, slug
 from acise_p2_cidt.data import build, load
+from acise_p2_cidt.validate import live
 from acise_p2_cidt.viz import plots
 
 # the real build's feature list; refresh when the build's features change
@@ -158,8 +160,16 @@ def mock_pool(tmp: pathlib.Path, monkeypatch) -> list[str]:
     monkeypatch.setattr(build, "RESULTS_DIR", tmp / "results" / "collection")
     monkeypatch.setattr(load, "PROCESSED_DIR", tmp / "processed")
     monkeypatch.setattr(load, "SCHEMA_DIR", tmp / "results" / "collection")
+    monkeypatch.setattr(features, "OUT_DIR", tmp / "results" / "features")
+    monkeypatch.setattr(live, "MODEL_DIR", tmp / "results" / "model")
     monkeypatch.setattr(plots, "save", lambda fig, name, **k: fig)
     write_registry(targets.REGISTRY)
     for t in TARGETS:
         write_raw_cache(t)
     return SOURCES
+
+
+def write_tables() -> None:
+    """The built table and schema of every mock target, as `build-dataset` writes them."""
+    for t in TARGETS:
+        build.write(*mock_table(slug(t)), t)

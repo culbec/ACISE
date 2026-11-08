@@ -6,6 +6,10 @@ Implements [SPEC.md](SPEC.md). Code-level details (modules, signatures, layout, 
 
 **Testing rule.** Every driver change and every changed notebook cell is first tested offline on **mock data**: small synthetic run caches and per-target tables, generated in `tmp_path`. This keeps tests fast and independent of the API and the multi-hour builds. Real data only enters in phase 5 (operations) and when the user runs the notebooks.
 
+**Display rule.** Every displayed object that is not plain text (a table, a DataFrame or Series, a figure, a dict or list shown as an object) carries a visible title that says what it shows: which data (pooled or which source, which label T1/T2, which segment), and what the rows, columns or axes are. Figures set a title in the figure itself. Tables are displayed with a caption line right before them, in the same `display` call. Tables printed by the CLIs (rich console) set `title=`. A bare `display(df)` or a trailing expression that renders an object is not allowed. The notebook harness enforces this (backbone Sec. 11.2).
+
+**ASCII rule.** Code, comments, docstrings, notebook cells, figure and table titles, CLI output strings, config files and documentation use printable ASCII only. Common replacements: `-` for dashes, `~` for "approximately", `>=` / `<=`, `x` for "times", `->` for arrows, `+/-`, `Sec.` for the section sign, `A12` for the Vargha-Delaney statistic. New and edited text follows the rule from now on. The existing non-ASCII text is removed in phase 10, after the project is complete (backbone Sec. 12). Data read from GitHub (job names, branch names, commit messages) is not text we write and is left as it is.
+
 ## 1. Probe data (2026-11-07)
 
 Counts come from the Actions API `total_count` with no branch filter. 2,500 is the API's display cap, so `≥` marks a capped value. Failures are counted on the latest attempt, so first-attempt failures (the label) are slightly higher.
@@ -68,7 +72,9 @@ Each phase ends with its checks. A phase is not started before the previous one'
 
 Each driver phase is followed by its notebook step (N1–N6, §5.2), so the changed code can be run from the notebooks before the next phase starts. Order:
 
-1 → 2 → **N1** → 3 → **N2** → 4 → **N3** → 6 → **N4** → 5 → 7 (**N5**) → 8 → 9 → **N6**
+1 → 2 → **N1** → 3 → **N2** → 4 → **N3** → 6 → **N4** → 5 → 7 (**N5**) → 8 → 9 → **N6** -> 10
+
+Phase 10 (ASCII cleanup) is a refactoring step: it runs once every other phase is done and changes no behaviour.
 
 Phase 6 is code only (tested on mock data), so it runs **before** phase 5. Phase 5 then runs from the finished `collection.ipynb`, and its outputs feed the already-edited analysis notebooks.
 
@@ -224,6 +230,20 @@ Checks:
 - The report shows the confusion matrix, MCC, Parrot and majority on the same runs, the per-scenario table, and the imputed features per prediction.
 - No scored run is predicted after its completion time (checked from the recorded timestamps).
 
+### Phase 10 - ASCII cleanup (refactoring)
+
+Runs after N6, when the project is complete. Behaviour does not change.
+
+Tasks (backbone Sec. 12):
+1. Replace every non-ASCII character in the files we write under `projects/2/` (`src/`, `tests/`, `scripts/`, `config/`, `notebook/*.ipynb` cell sources, `pyproject.toml`, READMEs) and in the project-2 documentation (`docs/specs/project-2/`, `docs/plans/projects/2/`), using the replacements of the ASCII rule.
+2. Strings that reach output (figure titles, axis labels, captions, CLI tables, log messages) are replaced too, so the rendered output is ASCII as well.
+3. Add the ASCII check as a permanent test, so new non-ASCII text fails the suite.
+
+Checks:
+- `tests/test_ascii.py` passes: no file in its scope holds a byte above `0x7F`.
+- The full test suite and `test_notebooks.py` pass, unchanged otherwise.
+- Built tables, schemas and selected-feature files are unchanged (the cleanup touches no data path or column name; any column name that held non-ASCII is renamed only together with a rebuild, recorded here).
+
 ## 5. Notebook changes
 
 The notebooks in `projects/2/notebook/` analyse the pooled dataset, the list of enabled targets in `config/targets.json`, as if it came from one CI workflow. Next to every pooled result they report the same statistic per source (repo:workflow pair).
@@ -236,6 +256,7 @@ The notebooks in `projects/2/notebook/` analyse the pooled dataset, the list of 
 - **Shared setup.** Every notebook opens with the same constants cell: `SOURCES = [slug(c.target) for c in load_targets()]` (enabled targets) and `DATASET = pool_name(SOURCES)`. The data for that list is loaded once.
 - **n8n-specific content goes.** The Node 25.x regime (`REGIME`), n8n job categories, and observations written for n8n master no longer describe the data. Regime analysis becomes a per-source failure-rate view. `## Observations` cells become placeholders, filled in after the real run.
 - **When.** In steps N1–N6 (§5.2), each right after the driver phase whose code it calls. A step edits only the sections listed for it; the other sections stay as they are until their step.
+- **Labelled displays.** Every table and figure a step adds or edits follows the display rule (top of this plan): figures get a title, tables a caption line in the same `display` call, no bare `display(df)` and no trailing object expression. The sections edited in N1-N3 were written before the rule; N4 brings them under it (captions and titles only, no logic change), together with the rich tables of the `label-check` CLI.
 - **Harness first.** `tests/nb_harness.py` and `tests/test_notebooks.py` (backbone §11) are written in N1. Each step extends `tests/mock_pool.py` with what its sections read, and adds its notebook's sections to `test_notebooks.py`. Until a notebook's last step, its test runs only the sections edited so far (the cells up to the last edited one).
 
 ### 5.2 Order
@@ -247,7 +268,7 @@ Phases 1–2 removed `N8N_MASTER`, so every setup cell that imports it fails unt
 | N1 | phase 2 | `collection.ipynb`: setup, 1. Collect (`live`), manifest table | collect the 28-day phase 3 sample from the notebook; manifest table per source |
 | N2 | phase 3 | `collection.ipynb`: new "Label check" section after 1: `labels.summary` per candidate (top jobs, infra share, T2 failures, flaky rate, events) | the phase 3 classification and its re-run after `exclude_jobs` |
 | N3 | phase 4 | `collection.ipynb`: 2. Build per source (`live`, schema table, `n_dropped`), and sections 3–6 **per source** (coverage, events and lineages, label balance, lineage streaks, flaky), each source read with `load(slug, ...)` | build the sample tables and inspect lineages, events, drops, T2 per target |
-| N4 | phase 6 | `collection.ipynb`: pooled `load(SOURCES, ...)` and the pooled side of sections 2–6. `eda.ipynb`: all. `feature_selection.ipynb`: setup, 1–8 except the per-source check. `tree.ipynb`: setup, 1–7, 9 (pooled and per-source rows) | after phase 5: the whole collection, EDA, pooled feature selection and CV |
+| N4 | phase 6 | `collection.ipynb`: pooled `load(SOURCES, ...)` and the pooled side of sections 2–6; titles and captions for the N1-N3 sections (display rule). `eda.ipynb`: all. `feature_selection.ipynb`: setup, 1–8 except the per-source check. `tree.ipynb`: setup, 1–7, 9 (pooled and per-source rows) | after phase 5: the whole collection, EDA, pooled feature selection and CV |
 | N5 | start of phase 7 | `feature_selection.ipynb`: per-source check (E1 lists). `tree.ipynb`: 5. E2 vs E1 tests, 6. repository-proxy check, 8. E1 and E3 | E1–E3 on the real pool |
 | N6 | phase 9 | `validation.ipynb`: all, including 6. Sandbox | freeze, re-test, case studies, in-progress run, sandbox report |
 
@@ -300,6 +321,7 @@ Phase 8 has no step of its own: `validation.ipynb` 1–4 and 6 are edited togeth
 - `test_notebooks.py` (backbone §11) runs every notebook top to bottom on the mock pool, with `live` cells stubbed, and passes.
 - No notebook still references `N8N_MASTER`, `REPO`, or `REGIME` (grep check).
 - Every pooled table or figure has its per-source counterpart, listed in §5.3.
+- Every displayed table and figure has a title or caption (display rule); the harness fails the cell that breaks it.
 
 ## 6. Risks
 

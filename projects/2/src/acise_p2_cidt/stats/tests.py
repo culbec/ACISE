@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.stats import mannwhitneyu, wilcoxon
 
 # run_cv columns that are not metrics
-ID_COLS = ["method", "fold", "n_test", "n_fail"]
+ID_COLS = ["method", "fold", "source", "n_test", "n_fail"]
 
 
 class WilcoxonResult(NamedTuple):
@@ -18,25 +18,30 @@ class WilcoxonResult(NamedTuple):
 
 def summary(results: pd.DataFrame) -> pd.DataFrame:
     """
-    Mean and std per method and metric over the folds.
+    Mean and std per method and metric over the folds, and per source when the
+    results have a ``source`` column.
 
     Args:
         results (pd.DataFrame): concatenated ``run_cv`` frames.
 
     Returns:
-        pd.DataFrame: columns method, metric, mean, std.
+        pd.DataFrame: columns method, (source,) metric, mean, std.
     """
     ids = [c for c in ID_COLS if c in results]
-    long = results.melt(id_vars=ids, var_name="metric")
-    return (
-        long.groupby(["method", "metric"])["value"].agg(["mean", "std"]).reset_index()
+    keys = (
+        ["method", "source", "metric"] if "source" in results else ["method", "metric"]
     )
+    long = results.melt(id_vars=ids, var_name="metric")
+    return long.groupby(keys)["value"].agg(["mean", "std"]).reset_index()
 
 
-def per_fold(results: pd.DataFrame, metric: str) -> pd.DataFrame:
+def per_fold(results: pd.DataFrame, metric: str, source: str = "all") -> pd.DataFrame:
     """
-    Fold x method table of ``metric``: the paired input of the tests.
+    Fold x method table of ``metric`` on one source (default: the pooled rows): the
+    paired input of the tests.
     """
+    if "source" in results:
+        results = results[results["source"] == source]
     return results.pivot(index="fold", columns="method", values=metric)
 
 

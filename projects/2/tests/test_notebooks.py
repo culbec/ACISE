@@ -3,18 +3,37 @@ Notebooks on the mock pool. Each notebook runs only the cells already edited for
 several targets; `UNTIL` holds the last such cell per notebook.
 """
 
+import json
 import pathlib
+import re
 
 import mock_pool
+import nbformat
 import pytest
-from nb_harness import run_notebook
+from nb_harness import check_display, run_notebook
 
+from acise_p2_cidt.analysis import features
 from acise_p2_cidt.collect import http
 from acise_p2_cidt.collect.targets import slug
+from acise_p2_cidt.data.load import pool_name
+from acise_p2_cidt.tree import forest, tune
 
 NB = pathlib.Path(__file__).resolve().parents[1] / "notebook"
 # last cell edited for multi-repo, per notebook
 UNTIL = {"collection.ipynb": None}
+
+
+def test_display_rule():
+    """Captions and titles are checked; a bare table or untitled figure fails."""
+    import pandas as pd
+    import plotly.graph_objects as go
+    from IPython.display import Markdown
+
+    check_display("text", Markdown("**t**"), pd.DataFrame())
+    check_display(go.Figure().update_layout(title="t"))
+    for bad in [(pd.DataFrame(),), (go.Figure(),), ("", pd.Series(dtype=int))]:
+        with pytest.raises(AssertionError):
+            check_display(*bad)
 
 
 @pytest.fixture
@@ -37,7 +56,8 @@ def test_collection(pool):
         },
         until=UNTIL["collection.ipynb"],
     )
-    assert ns["SOURCES"] == pool
+    assert ns["SOURCES"] == pool and ns["t1"].meta["sources"] == pool
+    assert list(ns["pool_table"].columns) == ["T1", "T2"]
     assert list(ns["manifest_table"].index) == pool
     assert {"runs", "api_calls", "event: push"} <= set(ns["manifest_table"].columns)
     lt = ns["label_table"]
@@ -51,11 +71,82 @@ def test_collection(pool):
     )
     assert (st["dropped: infra_failure"] == 3).all() and (st["no_git"] < 0.1).all()
     assert list(ns["shifts"].index) == [(pool[0], "2026-07")]
-    assert list(ns["lineage_table"].index) == pool
+    with_pool = [*pool, "all"]
+    assert list(ns["lineage_table"].index) == with_pool
     bt = ns["balance_table"]
-    assert (bt[("runs", "T2")] < bt[("runs", "T1")]).all() and bt[("eligible", "e1_e3")].all()
     assert (
-        list(ns["streak_table"].index) == pool
-        and (ns["streak_table"]["max"] >= 1).all()
+        list(bt.index) == with_pool and (bt[("runs", "T2")] < bt[("runs", "T1")]).all()
     )
-    assert set(ns["flaky_table"].index) == set(pool)
+    assert bt.loc[pool, ("eligible", "e1_e3")].all()
+    assert bt.loc["all", ("runs", "T1")] == ns["t1"].meta["n_rows"]
+    st = ns["streak_table"]
+    assert list(st.index) == with_pool and (st["max"] >= 1).all()
+    assert st.loc["all", "streaks"] == st.loc[pool, "streaks"].sum()
+    assert list(ns["flaky_table"].index) == with_pool
+
+
+@pytest.fixture
+def built(pool):
+    """The mock pool with every source's table already built."""
+    mock_pool.write_tables()
+    return pool
+
+
+@pytest.mark.notebook
+def test_eda(built):
+    ns = run_notebook(NB / "eda.ipynb", {})
+    assert ns["t2"].meta["sources"] == built
+    assert list(ns["sizes"].index) == [*built, "all"]
+    assert set(ns["nan_by_source"].columns) == set(built)
+    assert set(ns["rates"].columns.get_level_values(0)) == {"all", *built}
+    assert {"event_push", "from_fork", "lineage_first_run"} <= set(ns["binary"])
+    assert set(ns["job_share"].columns) == set(built) and 0 <= ns["acc"] <= 1
+
+
+@pytest.mark.notebook
+def test_feature_selection(built):
+    ns = run_notebook(NB / "feature_selection.ipynb", {})
+    assert ns["t2"].meta["sources"] == built and ns["sel"].features
+    for s in (ns["sel"], ns["sel1"]):
+        path = (
+            features.OUT_DIR
+            / f"selected_features_{s.meta['target']}_{pool_name(built)}.json"
+        )
+        assert json.loads(path.read_text())["meta"]["sources"] == built
+
+
+@pytest.mark.notebook
+def test_tree(built, monkeypatch):
+    # one grid point and a 5-tree forest keep the test fast; the notebook is unchanged
+    monkeypatch.setattr(tune, "GRID", {k: v[:1] for k, v in tune.GRID.items()})
+    monkeypatch.setattr(
+        forest,
+        "GRID",
+        {k: v[:1] for k, v in forest.GRID.items()} | {"n_estimators": [5]},
+    )
+    extra = [
+        c
+        for c in ("files_changed", "lineage_first_run", "from_fork")
+        if c in mock_pool.FEATURE_COLS
+    ]
+    for t in ("T1", "T2"):
+        path = features.OUT_DIR / features._file_name(t, pool_name(built))
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"features": [*mock_pool.SIGNAL, *extra]}))
+    ns = run_notebook(NB / "tree.ipynb", {})
+    for t in ("T1", "T2"):
+        r = ns["results"][t]
+        assert set(r["source"]) == {"all", *built}
+        assert set(r["method"]) == {"cart", "sklearn", "parrot", "majority", "forest"}
+        pooled = r[r["source"] == "all"].groupby(["method", "fold"])["n_test"].sum()
+        parts = r[r["source"] != "all"].groupby(["method", "fold"])["n_test"].sum()
+        assert pooled.equals(parts)
+
+
+def test_no_single_repo_names():
+    """Notebooks edited for the pool no longer name n8n constants."""
+    for name in ("collection", "eda", "feature_selection", "tree"):
+        text = "".join(
+            c.source for c in nbformat.read(NB / f"{name}.ipynb", as_version=4).cells
+        )
+        assert not re.search(r"N8N_MASTER|REGIME|\bREPO\s*=", text), name

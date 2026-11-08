@@ -2,10 +2,11 @@ import argparse
 import json
 import os
 import pathlib
+import time
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, Self
 
 from rich.progress import MofNCompleteColumn, Progress
 
@@ -188,6 +189,63 @@ def fetch_details(t: Target, runs: Iterable[dict]) -> int:
     return n
 
 
+class _NotebookBar:
+    """
+    The part of rich's `Progress` that `fetch_windows` uses, drawn with ipywidgets.
+    A redraw only sets the widgets' values; rich instead clears and reprints its
+    output widget, which some notebook front ends stack as several copies.
+    """
+
+    def __init__(self) -> None:
+        from ipywidgets import HBox, IntProgress, Label, VBox
+
+        self._widgets = (HBox, IntProgress, Label)
+        self._rows: list[tuple] = []  # (bar, label, [completed, total, description])
+        self._box = VBox()
+
+    def __enter__(self) -> Self:
+        from IPython.display import display
+
+        display(self._box)
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.refresh()
+
+    def add_task(self, description: str, total: int | None = None) -> int:
+        HBox, IntProgress, Label = self._widgets
+        bar, label = IntProgress(min=0, max=1), Label()
+        self._rows.append((bar, label, [0, total or 0, description]))
+        self._box.children = [*self._box.children, HBox([bar, label])]
+        self.refresh()
+        return len(self._rows) - 1
+
+    def reset(self, task: int, total: int, description: str) -> None:
+        self._rows[task][2][:] = [0, total, description]
+
+    def advance(self, task: int) -> None:
+        self._rows[task][2][0] += 1
+
+    def refresh(self) -> None:
+        for bar, label, (done, total, description) in self._rows:
+            bar.max, bar.value = max(total, 1), done
+            label.value = f"{description}  {done}/{total}"
+
+
+def _advancing(bar, task: int, runs: list[dict]) -> Iterator[dict]:
+    """
+    Yields `runs`, advancing `task` after each one and redrawing at most every 0.2 s.
+    The redraw runs in the caller's thread.
+    """
+    last = 0.0
+    for r in runs:
+        yield r
+        bar.advance(task)
+        if time.monotonic() - last >= 0.2:
+            bar.refresh()
+            last = time.monotonic()
+
+
 def fetch_windows(t: Target, since: date, until: date) -> list[pathlib.Path]:
     """
     Runs of every month window in `[since, until]`, each followed by its details.
@@ -201,22 +259,29 @@ def fetch_windows(t: Target, since: date, until: date) -> list[pathlib.Path]:
     Returns:
         list[pathlib.Path]: the window files.
     """
-    # One live display for the whole collection: in Jupyter every rich Live is its
-    # own output widget, so a bar per window leaves a trail of blank widgets.
+    # One display for the whole collection, redrawn only from this thread.
     windows, months = [], _months(since, until)
-    with Progress(
-        *Progress.get_default_columns(), MofNCompleteColumn(), console=log
-    ) as bar:
+    bar = (
+        _NotebookBar()
+        if log.is_jupyter
+        else Progress(
+            *Progress.get_default_columns(),
+            MofNCompleteColumn(),
+            console=log,
+            auto_refresh=False,
+        )
+    )
+    with bar:
         w_task = bar.add_task("windows", total=len(months))
         r_task = bar.add_task("runs")
         for a, b in months:
             for p in _fetch_window(t, *_bounds(a, b)):
                 runs = read_json(p)["workflow_runs"]
                 bar.reset(r_task, total=len(runs), description=p.stem)
-                fetch_details(t, bar.track(runs, task_id=r_task))
+                fetch_details(t, _advancing(bar, r_task, runs))
                 windows.append(p)
             bar.advance(w_task)
-        bar.refresh()
+            bar.refresh()
     return windows
 
 

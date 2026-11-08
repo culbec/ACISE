@@ -80,3 +80,70 @@ def test_bad_input():
     with pytest.raises(FileNotFoundError, match="build-dataset"):
         load.load("other__repo__2", "T1")
     assert load.available_targets() == [SLUG]
+
+
+OTHER = "owner__other__2"
+
+
+def write_other(feature_cols=("prev_failed", "churn")):
+    """A second source, 12 hours after each SLUG row, with 3 rows sharing SLUG times."""
+    other = TABLE.assign(
+        run_id=TABLE["run_id"] + 100,
+        created_at=TABLE["created_at"] + pd.Timedelta(hours=12),
+        churn=TABLE["churn"] + 0.5,
+    )
+    other.loc[:2, "created_at"] = TABLE.loc[:2, "created_at"]  # ties with SLUG
+    other.to_csv(load.table_path(OTHER), index=False)
+    load.schema_path(OTHER).write_text(
+        json.dumps(SCHEMA | {"repo": "owner/other", "feature_cols": list(feature_cols)})
+    )
+
+
+def test_pool_interleaves_by_time():
+    write_other()
+    ds = load.load([SLUG, OTHER], "T1")
+    assert len(ds.X) == 20 and ds.order.is_monotonic_increasing
+    # rows 0-2 tie on created_at: SLUG before OTHER (by source name)
+    assert ds.source.tolist()[:8] == [SLUG, OTHER] * 4
+    assert ds.X["churn"].tolist()[:8] == [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]
+    assert ds.meta["dataset"] == load.pool_name([OTHER, SLUG])
+    assert ds.meta["sources"] == [SLUG, OTHER] and "repo" not in ds.meta
+    assert ds.meta["per_source"] == {
+        SLUG: {"n_rows": 10, "n_failed": 4},
+        OTHER: {"n_rows": 10, "n_failed": 4},
+    }
+    assert ds.meta["feature_cols"] == SCHEMA["feature_cols"]
+
+
+def test_pool_filters_after_pooling():
+    write_other()
+    t2 = load.load([SLUG, OTHER], "T2")
+    assert len(t2.X) == 14 and t2.dev_mask.sum() == int(14 * 0.2)  # dev cut on the pool
+    assert (t2.source.value_counts() == 7).all()
+    cut = load.load([SLUG, OTHER], "T1", until=datetime(2026, 1, 2))
+    assert cut.source.tolist() == [
+        SLUG,
+        OTHER,
+        SLUG,
+        OTHER,
+    ]  # 01-01, 01-01 12h, 01-02, ...
+    assert cut.meta["per_source"][OTHER]["n_rows"] == 2
+
+
+def test_pool_feature_mismatch():
+    write_other(feature_cols=("churn",))
+    with pytest.raises(ValueError, match=OTHER):
+        load.load([SLUG, OTHER], "T1")
+
+
+def test_single_slug_source():
+    ds = load.load(SLUG, "T1")
+    assert (ds.source == SLUG).all() and ds.meta["sources"] == [SLUG]
+
+
+def test_pool_name():
+    assert load.pool_name([SLUG, OTHER]) == load.pool_name([OTHER, SLUG])
+    assert load.pool_name([SLUG]) != load.pool_name([SLUG, OTHER])
+    assert (
+        load.pool_name([SLUG]).startswith("pool-") and len(load.pool_name([SLUG])) == 13
+    )
