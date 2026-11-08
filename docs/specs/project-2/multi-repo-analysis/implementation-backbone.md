@@ -123,7 +123,8 @@ EVENTS: frozenset[str] = frozenset({"push", "pull_request", "merge_group"})  # c
 - `default_branch(repo_dir) -> str`: `git symbolic-ref --short HEAD` of the bare clone.
 - `merge_base(repo_dir, a, b) -> str | None`: `git merge-base a b`, memoised. None when a SHA is missing.
 - `commit_log(repo_dir, branch)` is unchanged and walks the **default** branch for targets without a branch.
-- Fork PR heads are reachable through `refs/pull/<n>/head`. Merge-queue heads and deleted branches may not be. They give NaN git features and are counted (existing `missing` warning).
+- `fetch_heads(repo_dir, shas) -> int`: the SHAs missing from the clone (`git cat-file --batch-check`) are fetched by SHA in batches of 200, each into `refs/ci/<sha>` so `gc` never prunes them. Returns the count still missing. Called by `build` before `git_features`, with every head and `base_sha`.
+- Without it, only each branch's and PR's current tip is in the clone: heads replaced by a later push, deleted branches and merge-queue heads are missing (24–50% on PR-heavy targets). GitHub serves them by SHA. Heads still missing after the fetch give NaN git features and are counted (existing `missing` warning).
 
 ## 6. Build (`data/build.py`, `data/history.py`)
 
@@ -138,11 +139,11 @@ New columns per run:
 | `from_fork` | feature | `head_repository.full_name != repo`, compared case-insensitively |
 | `is_default_branch` | feature | `head_branch == default_branch` and `event == "push"` |
 | `lineage` | id | see below |
-| `base_ref` | internal | PR base: `pull_requests[0].base.ref`, else the queue base, else the default branch |
+| `base_sha` | internal | the base commit as of the run: `pull_requests[0].base.sha`; else the SHA ending a merge-queue branch `gh-readonly-queue/<base>/pr-<n>-<sha>`; else the default branch's last first-parent commit created before the run (`rev-list -1 --first-parent --before=<created_at>`). Never today's branch tip: a PR merged later would have its head on it, giving an empty diff. `pull_requests` is empty for PRs no longer open (88% of n8n PR runs, all servo runs) |
 
 `lineage(run, repo) -> str`, a pure function with its own tests:
-- `pull_request`: `pr:<n>` from `pull_requests[0].number`. That list is empty for fork PRs, so the fallback is `head:<head_repository.full_name>:<head_branch>`.
-- `merge_group`: `pr:<n>` parsed from `head_branch` `gh-readonly-queue/<base>/pr-<n>-<sha>`, so queue runs join their PR's lineage.
+- `pull_request`: `head:<head_repository.full_name>:<head_branch>`. Not the PR number: `pull_requests` is filled only while the PR is open, so it is empty for most runs.
+- `merge_group`: `pr:<n>` parsed from `head_branch` `gh-readonly-queue/<base>/pr-<n>-<sha>`. Queue runs form their own lineage per PR and do not join the PR's runs; a PR's first queue run is the first of its lineage. Joining them would cost one API call per queued PR.
 - `push`: `branch:<head_branch>`.
 
 ### 6.2 Drops (`runs_frame`)
@@ -163,7 +164,7 @@ The completed-before sweep is unchanged. The pointer still moves runs into the k
 
 ### 6.4 Change features of non-default heads (`git_features`)
 
-- `anchor`: the head itself if it is on the first-parent log, else `merge_base(base_ref head, head)` if that is on the log, else NaN (counted as `missing`).
+- `anchor`: the head itself if it is on the first-parent log, else `merge_base(base_sha, head)` if that is on the log, else NaN (counted as `missing`).
 - File history, author history and `days_since_workflow_change` read the log up to and including `anchor`. This is the existing `searchsorted` on the anchor position, with `"right"` when the anchor is the merge-base, because the merge-base's own change precedes the PR.
 - `_change` input:
   - Push run: the head commit's rows of the log, as today. A push to a non-default branch has no log rows, so it uses `diff_numstat(head^, head)`.
@@ -233,7 +234,7 @@ All tests run offline. API data comes from recorded JSON fixtures, git from tiny
 |---|---|
 | `test_targets.py` (new) | valid file; each validation error of §2 (missing key, unknown key, bad repo, `workflow_id` bool/0/str, empty branch, bad regex, duplicate slug); `enabled_only`; `find_target` of a disabled target |
 | `test_collect.py` | `slug` with and without a branch, `/` in a branch; no `branch`/`event` params for an all-branch target; a day with 2,400 runs splits into hour windows and only leaves are written; resume makes zero calls; an hour above the cap raises; unsupported events get no details |
-| `test_git_changes.py` | `clone` without a branch fetches `refs/pull/*/head` (local bare "remote" in `tmp_path`); `merge_base` of a branch; `merge_base` with a missing SHA is None |
+| `test_git_changes.py` | `clone` without a branch fetches `refs/pull/*/head` (local bare "remote" in `tmp_path`); `merge_base` of a branch; `merge_base` with a missing SHA is None; `fetch_heads` fetches an unreferenced commit of the remote into `refs/ci/` and skips present SHAs |
 | `test_history.py` (new) | two interleaved lineages: `prev_failed` and `fail_streak` follow their own lineage; the first run of a lineage gets NaN and `lineage_first_run = 1`; a lineage run completed after the current run's creation is not "previous"; `sha_prior_failed` reads only completed runs; no `lineage` column means the same output as today (golden frame) |
 | `test_build.py` | `lineage()` for push, PR, fork PR (empty `pull_requests`), merge queue; all-excluded failure dropped as `infra_failure`; mixed failure kept; unsupported event dropped as `event_schedule`; event one-hot and `from_fork` columns |
 | `test_load.py` | two toy tables interleave by `created_at`; `source` set; mismatched `feature_cols` raise; `until`, T2 (P-D4: NaN kept) and the dev cut act after pooling; one slug behaves as before |

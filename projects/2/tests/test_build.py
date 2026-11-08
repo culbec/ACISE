@@ -213,8 +213,8 @@ def test_build_end_to_end(raw):
     ("run", "expected"),
     [
         ({"event": "push", "head_branch": "main"}, "branch:main"),
-        ({"event": "pull_request", "head_branch": "fix",
-          "pull_requests": [{"number": 7}]}, "pr:7"),
+        ({"event": "pull_request", "head_branch": "fix", "pull_requests": [{"number": 7}],
+          "head_repository": {"full_name": "acme/app"}}, "head:acme/app:fix"),
         ({"event": "pull_request", "head_branch": "fix", "pull_requests": [],
           "head_repository": {"full_name": "someone/app"}}, "head:someone/app:fix"),
         ({"event": "merge_group",

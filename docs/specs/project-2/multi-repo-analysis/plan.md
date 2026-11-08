@@ -38,9 +38,11 @@ Estimated per **month of collection window**, from the probe:
 |---|---|---|
 | Runs | ≈ 34,000 | ≈ 57,000 |
 | API calls (pages, `attempts/1` for re-runs, jobs of failed first attempts) | ≈ 8,000 (≈ 1.7 h at 5,000/h) | ≈ 14,000 (≈ 2.9 h) |
-| Build (git diffs per run) | measure in phase 3 | measure in phase 3 |
+| Clone (one per repository, measured 2026-11-08) | ≈ 20 min, 14.6 GB for 11 repositories | not measured |
+| Build: git work per run (measured) | ≈ 1.7 h for ≈ 210,000 runs, fetches included (2–27 ms a run against the base as of the run; commit-log walks 0.1–177 s per target) | not measured |
+| Fetching superseded heads by SHA | ≈ 1,400 heads a minute (ruff: 1,386 in 58 s); 24–50% of PR-heavy targets' heads | not measured |
 
-A 6-month window without openclaw costs about 10 h of API time. The full ~13 months would take about 22 h. Collection resumes after interruption, so it can run over several sessions.
+The git side is small next to the API side: the build's git work and the head fetches together stay under 2 h for the 6-month window (`scripts/build_time.py`, `results/collection/build_time.json`). A 6-month window without openclaw costs about 10 h of API time. The full ~13 months would take about 22 h. Collection resumes after interruption, so it can run over several sessions.
 
 ## 3. Decisions (confirmed 2026-11-07)
 
@@ -138,6 +140,8 @@ Checks:
 - Every row has a verdict, and `targets.json` has `enabled` and `exclude_jobs` set to match.
 - The budget (§2) is re-estimated with the measured build time. If it exceeds the P-D1 budget, the user re-decides the window before phase 5.
 
+Build timing (2026-11-08, 200 sampled runs per target, bases as of the run, missing commits fetched by SHA): ≈ 1.7 h for all 13 targets, servo and n8n PRs most of it. After the fetch, no sampled run lacks its head or base, and every diff succeeds. Phase 3 is done (2026-11-08). Missing heads in the clone: n8n PR 37%, ruff 50%, uv 48%, servo 41%, windmill 24–31%, brew 29%, tokio 26%, svelte, nushell and fd 11–15%, n8n master and gh-aw 0%. Most are same-repository PR heads that a later push replaced. All tried were fetchable by SHA, so phase 4 adds the fetch, and the window stays at 6 months.
+
 ### Phase 4 — Build: lineages, events and PR changes
 
 Tasks (backbone §6):
@@ -145,7 +149,7 @@ Tasks (backbone §6):
 2. Drop runs of unsupported events and runs failed only in `exclude_jobs` jobs, each counted in `n_dropped`.
 3. Lineage-scoped previous-run features: `prev_*`, `fail_streak`, `runs_since_last_fail`, `secs_since_last_fail`, the reference runs of the `*_since_prev_run` / `*_since_green` diffs, plus the new `lineage_prior_runs` and `lineage_first_run`. Window rates, load, flaky, author and file statistics stay target-wide.
 4. `sha_prior_failed`: the outcome of the latest run completed earlier on the same `head_sha` (any lineage).
-5. Change features of PR and merge-queue runs over `merge-base(base, head)..head`. File and author history are anchored at the merge-base when the head is not on the base branch's first-parent line.
+5. Before the change features: fetch, by SHA, every run head missing from the clone (backbone §5, `fetch_heads`). Change features of PR and merge-queue runs over `merge-base(base, head)..head`. File and author history are anchored at the merge-base when the head is not on the base branch's first-parent line.
 6. T2 per P-D4.
 
 Checks:
@@ -301,7 +305,7 @@ Phase 8 has no step of its own: `validation.ipynb` 1–4 and 6 are edited togeth
 
 - **Repository proxy.** Scale differs per source (durations, load, churn). The tree may first identify the source, then predict its base rate. Mitigation: the phase 7 checks.
 - **Dominant source.** n8n (and openclaw, if enabled) can set most splits. Report per-source sizes. Down-weighting only if E2 shows the problem.
-- **Unreachable heads.** Deleted branches and merge-queue refs can leave a head SHA missing from the clone, which gives NaN git features. Counted per target (phase 5 check).
+- **Unreachable heads.** The clone holds only the current tip of each branch and PR. Heads replaced by a later push, deleted branches and merge-queue refs are missing: 24–50% of sampled heads on PR-heavy targets (2026-11-08). GitHub still serves them by SHA, so the build fetches them first (phase 4 task 5). What is still missing gives NaN git features and is counted per target (phase 5 check).
 - **Cancelled runs.** New pushes often cancel running PR runs. These runs are dropped (not a label) and are missing from history.
 - **Young repositories.** openclaw (created 2025-11-24) and gh-aw (2025-08-12) have less history, and their early months may differ from later ones.
 - **Training time.** The pool can be 10 times larger than n8n master. The from-scratch CART grid and the 100-tree forest grow with it. Measure the time of one fold on the real pool before running all sections. If it is too slow, reduce the forest grid; do not subsample rows.

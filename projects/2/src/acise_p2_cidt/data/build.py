@@ -94,17 +94,18 @@ def lineage(run: dict) -> str:
     """
     The run's lineage: the PR or branch whose previous run it follows.
 
+    PR runs are keyed by their head branch, not the PR number: the API fills
+    `pull_requests` only while a PR is open, so the number is missing for most runs.
+
     Args:
         run (dict): raw run object.
 
     Returns:
-        str: `pr:<n>` for PR and merge-queue runs, `head:<repo>:<branch>` for a PR
-            without a PR number (fork PRs), `branch:<name>` for pushes and the rest.
+        str: `head:<head repo>:<branch>` for PR runs, `pr:<n>` for merge-queue runs
+            (one lineage per queued PR), `branch:<name>` for pushes and the rest.
     """
     event, branch = run["event"], run.get("head_branch") or ""
     if event == "pull_request":
-        if prs := run.get("pull_requests"):
-            return f"pr:{prs[0]['number']}"
         head = (run.get("head_repository") or {}).get("full_name", "")
         return f"head:{head}:{branch}"
     if event == "merge_group" and (m := _QUEUE.match(branch)):
