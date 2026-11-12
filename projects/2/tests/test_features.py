@@ -74,3 +74,20 @@ def test_exclude():
     assert "signal" not in s.features and "signal" not in s.scores.index
     assert s.meta["excluded"] == ["signal"]
     assert "signal" not in s.meta["dropped_in_clean"]
+
+
+def test_clean_keeps_history_empty_only_on_first_runs():
+    from acise_p2_cidt.analysis.features import clean
+
+    n = 100
+    first = (np.arange(n) % 2 == 0).astype(int)  # half the runs open a lineage
+    X = pd.DataFrame(
+        {
+            "lineage_first_run": first,
+            "prev_failed": np.where(first == 1, np.nan, np.arange(n) % 3 == 0),
+            "gappy": np.where(np.arange(n) % 3 == 0, 1.0, np.nan),  # 67% missing anywhere
+        }
+    )
+    kept = clean(X)
+    assert "prev_failed" in kept and "gappy" not in kept
+    assert not kept.isna().any().any()

@@ -69,12 +69,18 @@ class Split:
         pd.DataFrame
     )  # unprepared ds.X test rows, all columns (Parrot reads prev_failed)
     prep: SimpleImputer  # fitted on the fit rows; reused on new runs
+    # source slug per row; None for a single-source dataset
+    src_fit: np.ndarray | None = None
+    src_val: np.ndarray | None = None
+    src_test: np.ndarray | None = None
 
 
 @dataclass(frozen=True)
 class Result:
     pred: np.ndarray  # bool per test row, True = will fail
     payload: Any = None  # e.g. the fitted tree, chosen hyperparameters
+    # other predictions of the same fit, scored as `<method>_<name>`
+    variants: dict[str, np.ndarray] | None = None
 
 
 def folds(ds: Dataset, n_splits: int = 5, val_frac: float = 0.2) -> list[Fold]:
@@ -129,6 +135,7 @@ def prepare(ds: Dataset, features: list[str], fold: Fold) -> Split:
     """
     pipe = _imputer()
     X = ds.X[features]
+    src = None if ds.source is None else ds.source.to_numpy()
     return Split(
         X_fit=pipe.fit_transform(X.iloc[fold.fit]),
         y_fit=ds.y.iloc[fold.fit],
@@ -137,6 +144,9 @@ def prepare(ds: Dataset, features: list[str], fold: Fold) -> Split:
         X_test=pipe.transform(X.iloc[fold.test]),
         raw_test=ds.X.iloc[fold.test],
         prep=pipe,
+        src_fit=None if src is None else src[fold.fit],
+        src_val=None if src is None else src[fold.val],
+        src_test=None if src is None else src[fold.test],
     )
 
 
@@ -171,12 +181,39 @@ def _row(method: str, k: int, source: str, y: pd.Series, pred: np.ndarray) -> di
     }
 
 
+def _restrict(
+    fold: Fold, train: np.ndarray | None, test: np.ndarray | None
+) -> Fold:
+    """The fold with fit/val rows kept where `train` and test rows where `test`."""
+
+    def keep(rows: np.ndarray, mask: np.ndarray | None) -> np.ndarray:
+        return rows if mask is None else rows[mask[rows]]
+
+    return Fold(fold.k, keep(fold.fit, train), keep(fold.val, train), keep(fold.test, test))
+
+
+def _source_rows(
+    method: str, k: int, src: np.ndarray, y: pd.Series, pred: np.ndarray
+) -> list[dict]:
+    """One row per source of the test rows; fail-class scores NaN without failures."""
+    out = []
+    for s in sorted(set(src)):
+        m = src == s
+        part = _row(method, k, s, y[m], np.asarray(pred)[m])
+        if part["n_fail"] == 0:
+            part |= dict.fromkeys(FAIL_CLASS_SCORES, np.nan)
+        out.append(part)
+    return out
+
+
 def run_cv(
     ds: Dataset,
     features: list[str],
     fit_predict: Callable[[Split], np.ndarray | Result],
     method: str,
     n_splits: int = 5,
+    train: np.ndarray | None = None,
+    test: np.ndarray | None = None,
 ) -> tuple[pd.DataFrame, dict[int, Any]]:
     """
     Score ``fit_predict(split)`` on every fold. The tree is deterministic, so each
@@ -190,9 +227,14 @@ def run_cv(
             n_fail, every ``scores`` and ``domain`` key), plus, when the dataset has
             several sources, one row per fold and source scored on that source's test
             rows (fail-class scores NaN when the slice has no failure); and the
-            payloads keyed by fold.
+            payloads keyed by fold. ``Result.variants`` add rows under
+            ``<method>_<name>``.
+
+    ``train`` and ``test`` (bool per row of ``ds``) keep the pooled folds but restrict
+    fit and validation rows to ``train`` and test rows to ``test``, so a model trained
+    on part of the pool is scored on the same test rows as the pooled model.
     """
-    fold_list = folds(ds, n_splits)
+    fold_list = [_restrict(f, train, test) for f in folds(ds, n_splits)]
     per_source = ds.source is not None and ds.source.nunique() > 1
     rows, payloads = [], {}
     bar = Progress(
@@ -218,16 +260,14 @@ def run_cv(
             bar.update(task, description=name)
             out = fit_predict(split)
             res = out if isinstance(out, Result) else Result(out)
+            preds = {method: res.pred} | {
+                f"{method}_{v}": p for v, p in (res.variants or {}).items()
+            }
+            for m, pred in preds.items():
+                rows.append(_row(m, fold.k, "all", y_test, pred))
+                if per_source:
+                    rows += _source_rows(m, fold.k, split.src_test, y_test, pred)
             row = _row(method, fold.k, "all", y_test, res.pred)
-            rows.append(row)
-            if per_source:
-                src = ds.source.iloc[fold.test].to_numpy()  # pyright: ignore[reportOptionalMemberAccess]
-                for s in sorted(set(src)):
-                    m = src == s
-                    part = _row(method, fold.k, s, y_test[m], np.asarray(res.pred)[m])
-                    if part["n_fail"] == 0:
-                        part |= dict.fromkeys(FAIL_CLASS_SCORES, np.nan)
-                    rows.append(part)
             logger.debug(
                 f"{name}: mcc {row['mcc']:.3f}, "
                 f"recall {row['recall']:.3f}, precision {row['precision']:.3f}"

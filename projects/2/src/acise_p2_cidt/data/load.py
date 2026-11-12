@@ -62,6 +62,30 @@ def pool_name(slugs: list[str]) -> str:
     return "pool-" + hashlib.sha256("\n".join(sorted(slugs)).encode()).hexdigest()[:8]
 
 
+def repo_of(slug: str) -> str:
+    """`owner__name` of a target slug: the sources of one repository share it."""
+    return "__".join(slug.split("__")[:2])
+
+
+def subset(ds: Dataset, mask: np.ndarray, dataset: str) -> Dataset:
+    """
+    The rows of `ds` where `mask`, in the same order, with their dev flags; for
+    selecting features on part of a pool. `dataset` names the result's artefacts.
+    """
+    m = np.asarray(mask, bool)
+    y = ds.y[m].reset_index(drop=True)
+    return Dataset(
+        X=ds.X[m].reset_index(drop=True),
+        y=y,
+        dev_mask=ds.dev_mask[m],
+        meta=ds.meta | {"dataset": dataset, "n_rows": len(y), "n_failed": int(y.sum()),
+                        "sources": [] if ds.source is None else sorted(set(ds.source[m])),
+                        "n_dev": int(ds.dev_mask[m].sum())},  # fmt: skip
+        order=ds.order[m].reset_index(drop=True),
+        source=None if ds.source is None else ds.source[m].reset_index(drop=True),
+    )
+
+
 def available_targets() -> list[str]:
     """
     Targets with a built table.

@@ -70,3 +70,18 @@ def test_pipeline_with_stand_in_models():
     r = paired_wilcoxon(t["tree"], t["rule"])
     assert r.min_p == pytest.approx(0.0625) or r.flag  # 2^(1-5) with 5 folds
     assert 0 <= vargha_delaney_a12(t["tree"], t["rule"]) <= 1
+
+
+def test_per_cell_and_compare():
+    from acise_p2_cidt.stats.tests import compare, per_cell
+
+    rows = [
+        {"method": m, "fold": k, "source": s, "n_fail": n, "mcc": v}
+        for k in range(5)
+        for s, n in (("all", 99), ("big", 20), ("tiny", 2))
+        for m, v in (("a", 0.3 + 0.01 * k), ("b", 0.1))
+    ]
+    t = per_cell(pd.DataFrame(rows), "mcc")
+    assert set(t.index.get_level_values("source")) == {"big"} and len(t) == 5
+    c = compare(t, "a", "b")
+    assert c["n"] == 5 and c["A12"] == 1.0 and c["mean_diff"] > 0

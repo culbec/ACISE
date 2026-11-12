@@ -7,7 +7,7 @@ import pandas as pd
 from acise_p2_cidt.metrics.metrics import mcc as matthews_corrcoef
 from acise_p2_cidt.training.cv import Result, Split
 from acise_p2_cidt.tree.cart import CART, Criterion
-from acise_p2_cidt.tree.tune import Choice, choose_threshold
+from acise_p2_cidt.tree.tune import Choice, choose_threshold, predict_per_source
 from acise_p2_cidt.utils.logging.log import get_logger
 
 # 2 x 2 x 2 = 8 forests per fold. Depth and leaf size are the only tree controls
@@ -224,5 +224,10 @@ def fit_predict(split: Split, params: dict | None = None) -> Result:
         best, grid = grid_search(split)
         params = best.params
     choice, forest = _tune_point(split, params)
-    pred = forest.predict(split.X_test, threshold=choice.threshold)
-    return Result(pred, {"choice": choice, "forest": forest, "grid": grid})
+    choice, pred, variants = predict_per_source(
+        forest.predict_proba(split.X_val)[:, 1],
+        forest.predict_proba(split.X_test)[:, 1],
+        split,
+        choice,
+    )
+    return Result(pred, {"choice": choice, "forest": forest, "grid": grid}, variants)

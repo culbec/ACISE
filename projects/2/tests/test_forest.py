@@ -22,6 +22,7 @@ class LoggedSplit:
         ys = pd.Series(y)
         self.X_fit, self.y_fit = X.iloc[:300], ys.iloc[:300]
         self.X_val, self.y_val = X.iloc[300:450], ys.iloc[300:450]
+        self.src_fit = self.src_val = self.src_test = None  # single source
         self._X_test, self._events = X.iloc[450:], events
 
     @property

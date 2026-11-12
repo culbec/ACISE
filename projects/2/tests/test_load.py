@@ -147,3 +147,14 @@ def test_pool_name():
     assert (
         load.pool_name([SLUG]).startswith("pool-") and len(load.pool_name([SLUG])) == 13
     )
+
+
+def test_subset_and_repo_of():
+    write_other()
+    ds = load.load([SLUG, OTHER], "T1")
+    part = load.subset(ds, (ds.source == OTHER).to_numpy(), dataset="part")
+    assert (part.source == OTHER).all() and len(part.X) == 10
+    assert part.order.is_monotonic_increasing and part.X.index.equals(pd.RangeIndex(10))
+    assert part.dev_mask.tolist() == ds.dev_mask[(ds.source == OTHER).to_numpy()].tolist()
+    assert part.meta["dataset"] == "part" and part.meta["sources"] == [OTHER]
+    assert load.repo_of("acme__app__12@main") == "acme__app"

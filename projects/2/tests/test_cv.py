@@ -121,3 +121,33 @@ def test_per_source_without_failures_is_nan():
     assert s1[["mcc", "recall", "f1", "precision"]].isna().all().all()
     assert s1["accuracy"].notna().all() and (s1["n_test"] > 0).all()
     assert df.loc[df["source"] != "s1", "mcc"].notna().all()
+
+
+def test_run_cv_masks_restrict_fit_and_test():
+    ds = dataset()
+    source = pd.Series(np.where(np.arange(len(ds.y)) % 3 == 0, "s1", "s2"))
+    ds = dataclasses.replace(ds, source=source)
+    s1 = (source == "s1").to_numpy()
+    seen = []
+
+    def only_s1(split):
+        seen.append(set(split.src_fit) | set(split.src_val) | set(split.src_test))
+        return majority(split)
+
+    df, _ = run_cv(ds, ["a", "b"], only_s1, "m", train=s1, test=s1)
+    assert all(s == {"s1"} for s in seen)
+    pooled, _ = run_cv(ds, ["a", "b"], majority, "m")
+    # same test rows as the s1 slice of the unrestricted run
+    a = df[df["source"] == "all"].set_index("fold")["n_test"]
+    b = pooled[pooled["source"] == "s1"].set_index("fold")["n_test"]
+    pd.testing.assert_series_equal(a, b)
+
+
+def test_run_cv_variants_are_scored():
+    ds = dataset()
+    df, _ = run_cv(
+        ds, ["a", "b"], lambda s: Result(majority(s), variants={"flip": ~majority(s)}), "m"
+    )
+    assert set(df["method"]) == {"m", "m_flip"}
+    a, b = (df.query(f"method == '{m}'")["recall"].to_numpy() for m in ("m", "m_flip"))
+    assert (a != b).all()

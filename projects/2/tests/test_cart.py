@@ -1,5 +1,3 @@
-import json
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -150,9 +148,9 @@ def test_pruning_path_matches_sklearn(seed, criterion, class_weight, max_depth, 
 @pytest.mark.parametrize("criterion", ["gini", "entropy"])
 def test_real_slice_matches_sklearn_up_to_ties(criterion):
     ds = load.load("n8n-io__n8n__33323319@master", "T2")
-    sel = load.SCHEMA_DIR.parent / "features" / "selected_features_T2_n8n-io__n8n.json"
-    X = ds.X[json.loads(sel.read_text())["features"]].iloc[:2000]
-    X = X.fillna(X.median()).to_numpy().astype(np.float32).astype(np.float64)
+    X = ds.X.iloc[:2000]  # every feature: real ties and NaN patterns, no selection file
+    # all-NaN columns have no median: 0
+    X = X.fillna(X.median()).fillna(0).to_numpy().astype(np.float32).astype(np.float64)
     y = ds.y.to_numpy()[:2000]
     ours, sk = fit_both(X, y, criterion, "balanced", 4, 10)
     assert ours.tree_.impurity[0] == pytest.approx(sk.tree_.impurity[0], abs=1e-12)

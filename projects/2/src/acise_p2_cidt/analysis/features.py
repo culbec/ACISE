@@ -137,7 +137,10 @@ def clean(
     Returns:
         pd.DataFrame: cleaned, imputed frame.
     """
-    X = X.loc[:, X.isna().mean() <= max_nan]
+    # The first run of a lineage has no history by definition, so its NaNs are not
+    # missing data; `lineage_first_run` already tells the tree about them.
+    first = X.get("lineage_first_run", pd.Series(0, X.index)).eq(1)
+    X = X.loc[:, X[~first].isna().mean() <= max_nan]
     X = X.fillna(X.median())
     # Ranks, not min-max: one huge outlier squeezes a min-max-scaled count column
     # to near-zero variance although it has hundreds of distinct values.

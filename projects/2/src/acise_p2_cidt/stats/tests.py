@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from scipy.stats import mannwhitneyu, wilcoxon
 
+from acise_p2_cidt.training.cv import MIN_TEST_FAILURES
+
 # run_cv columns that are not metrics
 ID_COLS = ["method", "fold", "source", "n_test", "n_fail"]
 
@@ -69,3 +71,30 @@ def vargha_delaney_a12(a, b) -> float:
     a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
     u, _ = mannwhitneyu(a, b)
     return np.asarray(u).item() / (a.size * b.size)
+
+
+def per_cell(
+    results: pd.DataFrame, metric: str, min_fail: int = MIN_TEST_FAILURES
+) -> pd.DataFrame:
+    """
+    (fold, source) x method table of ``metric``: the paired input when the 5 pooled
+    folds are too few. Cells with fewer than ``min_fail`` test failures are left out,
+    since one failure more or less moves their score a lot. Cells of one fold share a
+    model and a time window, so they are not independent.
+    """
+    r = results[(results["source"] != "all") & (results["n_fail"] >= min_fail)]
+    return r.pivot_table(index=["fold", "source"], columns="method", values=metric)
+
+
+def compare(table: pd.DataFrame, a: str, b: str) -> dict:
+    """Paired Wilcoxon and A12 of methods ``a`` vs ``b`` on the rows both have."""
+    pair = table[[a, b]].dropna()
+    w = paired_wilcoxon(pair[a], pair[b])
+    return {
+        "mean_diff": (pair[a] - pair[b]).mean(),
+        "p": w.p,
+        "n": w.n,
+        "min_p": w.min_p,
+        "flag": w.flag,
+        "A12": vargha_delaney_a12(pair[a], pair[b]),
+    }

@@ -1,17 +1,17 @@
 import itertools
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 import pandas as pd
 
 from acise_p2_cidt.metrics.metrics import mcc as matthews_corrcoef
-from acise_p2_cidt.training.cv import Result, Split
+from acise_p2_cidt.training.cv import MIN_TEST_FAILURES, Result, Split
 from acise_p2_cidt.tree.cart import CART
 from acise_p2_cidt.utils.logging.log import get_logger
 
-# 5 x 3 x 2 x 2 = 60 fits per fold. Depths stop at 8: pruning cuts deeper trees back.
+# 7 x 3 x 2 x 2 = 84 fits per fold; pruning cuts deep trees back.
 GRID: dict[str, list] = {
-    "max_depth": [3, 4, 5, 6, 8],
+    "max_depth": [3, 4, 5, 6, 8, 10, 12],
     "min_samples_leaf": [5, 10, 20],
     "criterion": ["gini", "entropy"],
     "class_weight": [None, "balanced"],
@@ -26,6 +26,8 @@ class Choice:
     alpha: float  # pruning alpha
     threshold: float  # predict "fail" when P(fail) > threshold
     val_mcc: float
+    # per source; a source missing here uses `threshold`
+    thresholds: dict[str, float] | None = None
 
 
 def choose_alpha(tree: CART, split: Split) -> float:
@@ -66,6 +68,50 @@ def choose_threshold(proba: np.ndarray, y: np.ndarray) -> float:
     cands = cands[np.argsort(np.abs(cands - 0.5), kind="stable")]
     mccs = [matthews_corrcoef(y, proba > t) for t in cands]
     return float(cands[int(np.argmax(mccs))])  # first max = nearest 0.5
+
+
+def choose_thresholds(
+    proba: np.ndarray, y: np.ndarray, src: np.ndarray, pooled: float
+) -> dict[str, float]:
+    """
+    One threshold per source, each tuned on that source's validation rows. A source
+    with fewer than `MIN_TEST_FAILURES` validation failures keeps `pooled`: a
+    threshold tuned on a handful of failures is noise.
+    """
+    out = {}
+    for s in np.unique(src):
+        m = src == s
+        out[str(s)] = (
+            choose_threshold(proba[m], y[m]) if y[m].sum() >= MIN_TEST_FAILURES else pooled
+        )
+    return out
+
+
+def apply_thresholds(proba: np.ndarray, src: np.ndarray | None, c: Choice) -> np.ndarray:
+    """True where P(fail) is above the row's source threshold (pooled if none)."""
+    if src is None or not c.thresholds:
+        return proba > c.threshold
+    return proba > np.array([c.thresholds.get(str(s), c.threshold) for s in src])
+
+
+def predict_per_source(
+    proba_val: np.ndarray, proba_test: np.ndarray, split: Split, c: Choice
+) -> tuple[Choice, np.ndarray, dict[str, np.ndarray] | None]:
+    """
+    Test predictions with per-source thresholds, when the validation rows hold more
+    than one source. The pooled-threshold predictions come back as the variant
+    `pooled_thr`, for comparison.
+    """
+    if split.src_val is None or len(np.unique(split.src_val)) < 2:
+        return c, proba_test > c.threshold, None
+    c = replace(
+        c,
+        thresholds=choose_thresholds(
+            proba_val, split.y_val.to_numpy(), split.src_val, c.threshold
+        ),
+    )
+    pred = apply_thresholds(proba_test, split.src_test, c)
+    return c, pred, {"pooled_thr": proba_test > c.threshold}
 
 
 def _tune_point(split: Split, params: dict) -> tuple[Choice, CART]:
@@ -126,13 +172,36 @@ def fit_predict(split: Split, params: dict | None = None) -> Result:
         params (dict | None): fixed CART parameters; None runs `grid_search`.
 
     Returns:
-        Result: test predictions; payload {"choice", "tree", "grid"} (grid None
-            when `params` is given).
+        Result: test predictions (per-source thresholds on a pool); payload
+            {"choice", "tree", "grid"} (grid None when `params` is given); variant
+            `pooled_thr` on a pool.
     """
     grid = None
     if params is None:
         best, grid = grid_search(split)
         params = best.params
     choice, tree = _tune_point(split, params)
-    pred = tree.predict(split.X_test, threshold=choice.threshold)
-    return Result(pred, {"choice": choice, "tree": tree, "grid": grid})
+    choice, pred, variants = predict_per_source(
+        tree.predict_proba(split.X_val)[:, 1],
+        tree.predict_proba(split.X_test)[:, 1],
+        split,
+        choice,
+    )
+    return Result(pred, {"choice": choice, "tree": tree, "grid": grid}, variants)
+
+
+def source_rate(split: Split) -> np.ndarray:
+    """
+    Baseline that knows only the source: P(fail) is the source's failure rate on the
+    fit rows (the overall rate for an unseen source), with one threshold tuned on
+    validation. A model close to it mostly tells the sources apart.
+    """
+    if split.src_fit is None:
+        raise ValueError("source_rate needs a dataset with sources")
+    rate = split.y_fit.groupby(split.src_fit).mean()
+
+    def proba(src: np.ndarray) -> np.ndarray:
+        return pd.Series(src).map(rate).fillna(split.y_fit.mean()).to_numpy()
+
+    threshold = choose_threshold(proba(split.src_val), split.y_val.to_numpy())
+    return proba(split.src_test) > threshold

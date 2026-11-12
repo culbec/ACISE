@@ -17,6 +17,7 @@ from acise_p2_cidt.collect import http
 from acise_p2_cidt.collect.targets import slug
 from acise_p2_cidt.data.load import pool_name
 from acise_p2_cidt.tree import forest, tune
+from acise_p2_cidt.validate import live
 
 NB = pathlib.Path(__file__).resolve().parents[1] / "notebook"
 # last cell edited for multi-repo, per notebook
@@ -107,6 +108,9 @@ def test_eda(built):
 def test_feature_selection(built):
     ns = run_notebook(NB / "feature_selection.ipynb", {})
     assert ns["t2"].meta["sources"] == built and ns["sel"].features
+    assert set(ns["sel_src"]) == set(built)  # every mock source has enough failures
+    for s in built:
+        assert features.load_features("T2", s) == ns["sel_src"][s].features
     for s in (ns["sel"], ns["sel1"]):
         path = (
             features.OUT_DIR
@@ -129,18 +133,33 @@ def test_tree(built, monkeypatch):
         for c in ("files_changed", "lineage_first_run", "from_fork")
         if c in mock_pool.FEATURE_COLS
     ]
-    for t in ("T1", "T2"):
-        path = features.OUT_DIR / features._file_name(t, pool_name(built))
+    meta = {"params": {"n_max": 5, "min_freq": 0.6, "n_boot": 2, "rho": 0.8, "seed": 0},
+            "excluded": []}  # fmt: skip
+    lists = {(t, pool_name(built)) for t in ("T1", "T2")} | {("T2", built[0]), ("T2", built[2])}
+    for t, name in lists:
+        path = features.OUT_DIR / features._file_name(t, name)
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"features": [*mock_pool.SIGNAL, *extra]}))
+        path.write_text(json.dumps({"features": [*mock_pool.SIGNAL, *extra], "meta": meta}))
     ns = run_notebook(NB / "tree.ipynb", {})
     for t in ("T1", "T2"):
         r = ns["results"][t]
         assert set(r["source"]) == {"all", *built}
-        assert set(r["method"]) == {"cart", "sklearn", "parrot", "majority", "forest"}
+        assert set(r["method"]) == {
+            "cart", "cart_pooled_thr", "sklearn", "parrot", "majority", "source_rate",
+            "forest", "forest_pooled_thr",
+        }  # fmt: skip
         pooled = r[r["source"] == "all"].groupby(["method", "fold"])["n_test"].sum()
         parts = r[r["source"] != "all"].groupby(["method", "fold"])["n_test"].sum()
         assert pooled.equals(parts)
+        assert (live.MODEL_DIR / f"cv_results_{t}_{pool_name(built)}.csv").exists()
+    # E1 for the two sources with a list; E3 leaves each of their repositories out
+    e = ns["e_results"]
+    assert set(e.query("method == 'cart_e1'")["source"]) == {built[0], built[2]}
+    assert set(e.query("method == 'cart_e3'")["source"]) == set(built)
+    cv = ns["results"]["T2"].query("method == 'cart'").set_index(["fold", "source"])["n_test"]
+    for m in ("cart_e1", "cart_e3"):
+        cells = e.query("method == @m").set_index(["fold", "source"])["n_test"]
+        assert cells.equals(cv.loc[cells.index])  # same test rows as the pooled model
 
 
 def test_no_single_repo_names():

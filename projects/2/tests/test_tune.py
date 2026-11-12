@@ -24,6 +24,7 @@ class GuardedSplit:
         self._parts, self._events = parts, events
         self.X_fit, self.y_fit = parts["X_fit"], parts["y_fit"]
         self.X_val, self.y_val = parts["X_val"], parts["y_val"]
+        self.src_fit = self.src_val = self.src_test = None  # single source
 
     @property
     def X_test(self) -> pd.DataFrame:
@@ -96,3 +97,55 @@ def test_empty_grid_raises():
     split = GuardedSplit(depth2_parts(), [])
     with pytest.raises(ValueError, match="no points"):
         tune.grid_search(split, SMALL_GRID | {"criterion": []})  # pyright: ignore[reportArgumentType]
+
+
+def _source_split(proba_val, y_val, src_val):
+    """Just what the per-source threshold code reads."""
+
+    class S:
+        pass
+
+    s = S()
+    s.y_val, s.src_val = pd.Series(y_val), np.asarray(src_val)
+    s.src_test = np.array(["a", "b", "new"])
+    return s
+
+
+def test_per_source_thresholds():
+    # source a fails above 0.3, source b above 0.7; c has too few failures to tune
+    rng = np.random.default_rng(0)
+    pa, pb, pc = rng.random(200), rng.random(200), rng.random(50)
+    proba = np.r_[pa, pb, pc]
+    y = np.r_[pa > 0.3, pb > 0.7, np.arange(50) < 3].astype(int)
+    src = np.repeat(["a", "b", "c"], [200, 200, 50])
+    th = tune.choose_thresholds(proba, y, src, pooled=0.5)
+    assert th["a"] < 0.35 and th["b"] > 0.65 and th["c"] == 0.5
+    c = tune.Choice({}, 0.0, 0.5, 0.0)
+    choice, pred, variants = tune.predict_per_source(
+        proba, np.array([0.4, 0.4, 0.4]), _source_split(proba, y, src), c
+    )
+    # a flags 0.4, b does not, an unseen source falls back to the pooled 0.5
+    assert pred.tolist() == [True, False, False]
+    assert variants["pooled_thr"].tolist() == [False, False, False]
+    assert choice.thresholds == th
+
+
+def test_single_source_keeps_pooled_threshold():
+    s = _source_split(np.r_[0.1, 0.9], [0, 1], ["a", "a"])
+    c = tune.Choice({}, 0.0, 0.5, 0.0)
+    choice, pred, variants = tune.predict_per_source(np.r_[0.1, 0.9], np.r_[0.4, 0.6, 0.6], s, c)
+    assert variants is None and choice.thresholds is None
+    assert pred.tolist() == [False, True, True]
+
+
+def test_source_rate_flags_the_failing_source():
+    class S:
+        pass
+
+    s = S()
+    s.src_fit = np.repeat(["bad", "good"], 100)
+    s.y_fit = pd.Series(np.r_[np.ones(80), np.zeros(20), np.zeros(90), np.ones(10)])
+    s.src_val = np.repeat(["bad", "good"], 20)
+    s.y_val = pd.Series(np.r_[np.ones(16), np.zeros(4), np.zeros(18), np.ones(2)])
+    s.src_test = np.array(["bad", "good", "unseen"])
+    assert tune.source_rate(s).tolist() == [True, False, False]

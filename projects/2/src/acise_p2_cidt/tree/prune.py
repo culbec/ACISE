@@ -78,7 +78,9 @@ def pruning_steps(tree: Tree) -> tuple[list[float], list[float], list[int]]:
             r_branch[a] += r_diff
             n_leaves[a] -= leaves_lost
             a = parent[a]
-        alphas.append(float(g[t]))
+        # A split never raises weighted impurity, so g >= 0; summing r_branch can
+        # still round it to a tiny negative (e.g. -5e-20), which `pruned` rejects.
+        alphas.append(max(float(g[t]), 0.0))
         totals.append(float(r_branch[0]))
         nodes.append(t)
     return alphas, totals, nodes
