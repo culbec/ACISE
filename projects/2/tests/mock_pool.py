@@ -139,6 +139,7 @@ def mock_table(s: str, n: int = 800) -> tuple[pd.DataFrame, dict]:
     df = pd.concat([ids, df], axis=1)
     schema = {
         "target_slug": s, "collected_at": "2026-11-05T00:00:00+00:00",
+        **TARGETS[k]._asdict(),  # repo, workflow_id, branch
         "n_runs": n, "n_failed": int(failed.sum()),
         "n_dropped": {"cancelled": 7 + k, "infra_failure": 3, "event_schedule": 2},
         "exclude_jobs": ["^Result$"], "events": ["merge_group", "pull_request", "push"],

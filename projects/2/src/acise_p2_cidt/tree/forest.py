@@ -216,8 +216,9 @@ def fit_predict(split: Split, params: dict | None = None) -> Result:
         params (dict | None): fixed RandomForest parameters; None runs `grid_search`.
 
     Returns:
-        Result: test predictions; payload {"choice", "forest", "grid"} (grid None
-            when `params` is given).
+        Result: test predictions (pooled threshold); payload {"choice", "forest",
+            "grid"} (grid None when `params` is given); variant `source_thr` on a
+            pool.
     """
     grid = None
     if params is None:

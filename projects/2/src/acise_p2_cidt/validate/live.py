@@ -3,7 +3,7 @@ import hashlib
 import json
 import pathlib
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 
 import numpy as np
@@ -11,12 +11,19 @@ import pandas as pd
 import skops.io as sio
 
 from acise_p2_cidt.analysis.features import load_features
+from acise_p2_cidt.collect import gh_runs, http
 from acise_p2_cidt.collect import git_changes as git
-from acise_p2_cidt.collect import http
 from acise_p2_cidt.collect.gh_runs import fetch_details, fetch_windows
-from acise_p2_cidt.collect.targets import Target
+from acise_p2_cidt.collect.targets import Target, TargetConfig, load_targets, slug
 from acise_p2_cidt.data.build import build
-from acise_p2_cidt.data.load import LABEL_COL, PREV_LABEL_COL, in_t2, load
+from acise_p2_cidt.data.load import (
+    LABEL_COL,
+    PREV_LABEL_COL,
+    in_t2,
+    load,
+    pool_name,
+    schema_path,
+)
 from acise_p2_cidt.data.load import Target as Label
 from acise_p2_cidt.metrics.metrics import domain, scores
 from acise_p2_cidt.training.cv import Fold, prepare
@@ -120,33 +127,69 @@ def load_model(path: pathlib.Path) -> tuple[CART | RandomForest, dict]:
 # =============================================================================
 
 
+def collection_until(sources: list[str]) -> date:
+    """
+    The collection's last day, read from each source's manifest; the sources of
+    one pool must share it.
+    """
+    days = {
+        s: json.loads((gh_runs.RESULTS_DIR / f"manifest_{s}.json").read_text())["until"]
+        for s in sources
+    }
+    if len(set(days.values())) != 1:
+        raise ValueError(f"sources were collected up to different days: {days}")
+    return date.fromisoformat(next(iter(days.values())))
+
+
+def _source_entry(s: str) -> dict:
+    """What `retest` and `predict_run` need to rebuild a source's runs."""
+    sc = json.loads(schema_path(s).read_text())
+    return {
+        "slug": s,
+        "repo": sc["repo"],
+        "workflow_id": sc["workflow_id"],
+        "branch": sc["branch"],
+        "exclude_jobs": list(sc.get("exclude_jobs", [])),
+    }
+
+
 def train_final(
-    dataset: str,
+    sources: str | list[str],
     target: Label,
     model: Model = "cart",
     params: dict | None = None,
     features: list[str] | None = None,
+    until: date | None = None,
 ) -> pathlib.Path:
     """
     Fits the frozen model on every run collected up to C and saves it.
 
     Same protocol as one CV fold: fit on the head, choose alpha and the threshold
     on the last `VAL_FRAC` rows, no refit, so both stay matched to the saved model.
+    One pooled threshold, as in the CV.
 
     Args:
-        dataset (str): target slug.
+        sources (str | list[str]): target slug, or the slugs of a pool.
         target (Label): "T1" or "T2".
         model (Model): "cart" or "forest".
         params (dict | None): fixed model parameters; None runs the grid search.
         features (list[str] | None): None reads the frozen selection.
+        until (date | None): the collection's last day; C is the end of it.
+            None reads the manifests.
 
     Returns:
         pathlib.Path: the `.skops` file.
     """
     if model not in ("cart", "forest"):
         raise ValueError(f"model must be 'cart' or 'forest', got {model!r}")
+    slugs = [sources] if isinstance(sources, str) else list(sources)
+    dataset = slugs[0] if isinstance(sources, str) else pool_name(slugs)
     features = features or load_features(target, dataset)
-    ds = load(dataset, target)
+    until = until or collection_until(slugs)
+    cutoff = pd.Timestamp(until, tz=UTC) + timedelta(days=1)  # C
+    ds = load(sources, target)
+    if ds.order.iloc[-1] >= cutoff:
+        raise ValueError(f"training runs created after C ({cutoff})")
     n = len(ds.y)
     cut = n - int(n * VAL_FRAC)
     split = prepare(ds, features, Fold(-1, np.arange(cut), np.arange(cut, n),
@@ -156,9 +199,7 @@ def train_final(
     est, choice = payload["tree" if model == "cart" else "forest"], payload["choice"]
     sidecar = {
         "dataset": dataset,
-        "repo": ds.meta.get("repo"),
-        "workflow_id": ds.meta.get("workflow_id"),
-        "branch": ds.meta.get("branch"),
+        "sources": [_source_entry(s) for s in slugs],
         "target": target,
         "model": model,
         "features": features,
@@ -166,9 +207,10 @@ def train_final(
         "alpha": choice.alpha,
         "threshold": choice.threshold,
         "val_mcc": choice.val_mcc,
-        "collected_at": ds.meta.get("collected_at"),
-        # C: runs created after the last training run are new to the model
-        "cutoff": ds.order.iloc[-1].isoformat(),
+        "collection_until": until.isoformat(),
+        # C, the end of the collection's last day: runs created at or after it
+        # are new to the model
+        "cutoff": cutoff.isoformat(),
         "n_train": cut,
         "n_val": n - cut,
         "train_fail_rate": float(split.y_fit.mean()),
@@ -186,8 +228,18 @@ def train_final(
 # =============================================================================
 
 
-def _target(sidecar: dict) -> Target:
-    return Target(sidecar["repo"], sidecar["workflow_id"], sidecar["branch"])
+def _config(entry: dict) -> TargetConfig:
+    t = Target(entry["repo"], entry["workflow_id"], entry["branch"])
+    return TargetConfig(t, True, tuple(entry["exclude_jobs"]))
+
+
+def _source(sidecar: dict, s: str) -> TargetConfig:
+    """The sidecar's source `s`; a source the model was not trained on is refused."""
+    for e in sidecar["sources"]:
+        if e["slug"] == s:
+            return _config(e)
+    known = [e["slug"] for e in sidecar["sources"]]
+    raise ValueError(f"{s!r} is not a source of this model: {known}")
 
 
 def _refresh(t: Target, cutoff: pd.Timestamp) -> None:
@@ -206,89 +258,155 @@ def _in_target(df: pd.DataFrame, target: str) -> pd.Series:
     return in_t2(df) if target == "T2" else pd.Series(True, df.index)
 
 
-def retest(path: pathlib.Path) -> pd.DataFrame:
+def _new_runs_path(path: pathlib.Path, side: dict) -> pathlib.Path:
+    """Built rows of every run after C, written by `retest` next to the models."""
+    return path.parent / f"new_runs_{side['dataset']}.csv"
+
+
+def _new_runs(side: dict) -> pd.DataFrame:
     """
-    Scores the saved model, unchanged, on the runs created after C.
-
-    New runs are fetched, and their features are built from the whole history
-    (old runs and earlier new runs, never later ones). Parrot and majority are
-    scored on the same rows. Writes `<model>_retest.csv` (metrics) and
-    `<model>_retest_runs.csv` (one row per run, for picking case studies).
-
-    Args:
-        path (pathlib.Path): `.skops` file from `train_final`.
-
-    Returns:
-        pd.DataFrame: one row per method, with the `run_cv` columns.
+    Every source's runs created after C, all targets, with a `source` column. Each
+    source is refreshed and built once; its features read the whole history of
+    that source (old runs and earlier new runs, never later ones).
     """
-    est, side = load_model(path)
-    t, cutoff = _target(side), pd.Timestamp(side["cutoff"])
-    _refresh(t, cutoff)
-    df, _ = build(t, select=lambda r: r["created_at"] > cutoff.timestamp())
+    cutoff = pd.Timestamp(side["cutoff"])
+    parts = []
+    for e in side["sources"]:
+        cfg = _config(e)
+        _refresh(cfg.target, cutoff)
+        df, _ = build(cfg, select=lambda r: r["created_at"] >= cutoff.timestamp())
+        parts.append(df.assign(source=e["slug"]))
+    df = pd.concat(parts, ignore_index=True)
+    return df.sort_values(["created_at", "source"]).reset_index(drop=True)
+
+
+def _score(path: pathlib.Path, est, side: dict, df: pd.DataFrame) -> pd.DataFrame:
+    """One model's re-test rows (pooled and per source); writes its two CSVs."""
     df = df[_in_target(df, side["target"])]
     if df.empty:
-        raise ValueError(f"no {side['target']} runs created after {cutoff}")
-
-    y = df[LABEL_COL].astype(int).to_numpy()
+        raise ValueError(f"no {side['target']} runs created after {side['cutoff']}")
     proba = est.predict_proba(_X(df, side))[:, 1]
     preds = {
         side["model"]: proba > side["threshold"],
         "parrot": (df[PREV_LABEL_COL] == 1).to_numpy(),
         "majority": np.full(len(df), side["train_fail_rate"] > 0.5),
     }
-    out = pd.DataFrame(
-        {"method": m, "fold": -1, "n_test": len(y), "n_fail": int(y.sum()),
-         **scores(y, p), **domain(y, p)}
-        for m, p in preds.items()
-    )  # fmt: skip
+    y = df[LABEL_COL].astype(int).to_numpy()
+    src = df["source"].to_numpy()
+    rows = []
+    for s in ["all", *sorted(set(src))]:
+        m = np.ones(len(y), bool) if s == "all" else src == s
+        rows += [
+            {"method": k, "fold": -1, "source": s, "n_test": int(m.sum()),
+             "n_fail": int(y[m].sum()), **scores(y[m], p[m]), **domain(y[m], p[m])}
+            for k, p in preds.items()
+        ]  # fmt: skip
+    out = pd.DataFrame(rows)
     stem = path.with_suffix("")
     out.to_csv(f"{stem}_retest.csv", index=False)
-    df[["run_id", "head_sha", "created_at", LABEL_COL]].assign(
+    df[["run_id", "source", "head_sha", "created_at", LABEL_COL]].assign(
         p_fail=proba, pred=preds[side["model"]]
     ).to_csv(f"{stem}_retest_runs.csv", index=False)
-    return out
+    return out.assign(target=side["target"])
+
+
+def retest(paths: pathlib.Path | list[pathlib.Path]) -> pd.DataFrame:
+    """
+    Scores saved models, unchanged, on the runs created after C.
+
+    The models must share their sources and C: the new runs are fetched and built
+    once, then every model is scored on them. Parrot and majority are scored on the
+    same rows as each model. As in `run_cv`, the scores are given pooled
+    (`source = "all"`) and per source; a source without new runs has no row.
+    Writes `<model>_retest.csv` (metrics) and `<model>_t
+    etest_runs.csv` (one row
+    per run, for picking case studies) next to each model.
+
+    Args:
+        paths (pathlib.Path | list[pathlib.Path]): `.skops` files from
+            `train_final`.
+
+    Returns:
+        pd.DataFrame: one row per model's method, source and target, with the
+            `run_cv` columns and `target`; Parrot and majority repeat per model.
+    """
+    paths = [paths] if isinstance(paths, pathlib.Path) else list(paths)
+    models = [load_model(p) for p in paths]
+    side = models[0][1]
+    for p, (_, s) in zip(paths, models):
+        if (s["sources"], s["cutoff"]) != (side["sources"], side["cutoff"]):
+            raise ValueError(f"{p.name}: other sources or C than {paths[0].name}")
+    df = _new_runs(side)
+    # `predict_run` reads a re-tested run's row from here instead of rebuilding
+    df.to_csv(_new_runs_path(paths[0], side), index=False)
+    return pd.concat(
+        [_score(p, est, s, df) for p, (est, s) in zip(paths, models)],
+        ignore_index=True,
+    )
 
 
 def _fetch_run(t: Target, ref: str) -> dict:
-    """One run of the workflow by id, or the latest master run of a commit SHA."""
+    """
+    One run of the workflow by id, or the latest run of a commit SHA (on a
+    branch-scoped target: its latest push run on that branch).
+    """
     if ref.isdigit():
         run = http.get(f"/repos/{t.repo}/actions/runs/{ref}")
     else:
-        runs = http.get(
-            f"/repos/{t.repo}/actions/workflows/{t.workflow_id}/runs",
-            {"head_sha": ref, "branch": t.branch, "event": "push"},
-        )["workflow_runs"]
+        q = {"head_sha": ref}
+        if t.branch is not None:
+            q |= {"branch": t.branch, "event": "push"}
+        runs = http.get(f"/repos/{t.repo}/actions/workflows/{t.workflow_id}/runs", q)[
+            "workflow_runs"
+        ]
         if not runs:
-            raise ValueError(f"no {t.branch} run of workflow {t.workflow_id} for {ref}")
+            raise ValueError(f"no run of workflow {t.workflow_id} for {ref}")
         run = runs[0]  # newest first
-    if run["workflow_id"] != t.workflow_id or run["head_branch"] != t.branch:
+    if run["workflow_id"] != t.workflow_id:
         raise ValueError(
-            f"run {run['id']} is workflow {run['workflow_id']} on "
-            f"{run['head_branch']!r}, the model {t.workflow_id} on {t.branch!r}"
+            f"run {run['id']} is workflow {run['workflow_id']}, "
+            f"the source {t.workflow_id}"
+        )
+    if t.branch is not None and run["head_branch"] != t.branch:
+        raise ValueError(
+            f"run {run['id']} is on {run['head_branch']!r}, the source on {t.branch!r}"
         )
     return run
 
 
-def predict_run(path: pathlib.Path, ref: str) -> dict:
+def predict_run(path: pathlib.Path, ref: str, source: str) -> dict:
     """
     Prediction and decision path for one run, finished or still running.
 
-    A run still in progress is built as if it completed when it was created: its
-    features read only runs completed before its creation, so the stand-in outcome
-    never reaches them, and its label is reported as unknown.
+    A run already re-tested by `retest` is read from its saved row, with no fetch
+    or build. Any other run is fetched and its source rebuilt. A run still in
+    progress is built as if it completed when it was created: its features read
+    only runs completed before its creation, so the stand-in outcome never reaches
+    them, and its label is reported as unknown.
 
     Args:
         path (pathlib.Path): `.skops` file from `train_final`.
         ref (str): run id, or commit SHA (its latest run).
+        source (str): slug of the run's source; it must be one of the sidecar's.
 
     Returns:
-        dict: run_id, sha, url, created_at, label (None while running), p_fail,
+        dict: source, run_id, sha, url, created_at, label (None while running), p_fail,
             predicted (True = will fail), threshold, in_target (False: outside
             the model's training population, e.g. after a failure on T2), and
             path (`CART.explain` lines; None for a forest).
     """
     est, side = load_model(path)
-    t = _target(side)
+    cfg = _source(side, source)
+    t = cfg.target
+    cached = _new_runs_path(path, side)
+    if ref.isdigit() and cached.exists():
+        rows = pd.read_csv(cached)
+        df = rows[(rows["run_id"] == int(ref)) & (rows["source"] == source)]
+        if len(df):
+            meta = {"id": int(ref), "head_sha": df["head_sha"].iat[0],
+                    "html_url": f"https://github.com/{t.repo}/actions/runs/{ref}",
+                    "created_at": str(df["created_at"].iat[0])}  # fmt: skip
+            return _explain(est, side, source, meta, df, pending=False)
     run = _fetch_run(t, ref)
     pending = run["status"] != "completed"
     if pending:
@@ -297,14 +415,22 @@ def predict_run(path: pathlib.Path, ref: str) -> dict:
     else:
         fetch_details(t, [run])
     _refresh(t, pd.Timestamp(side["cutoff"]))
-    df, _ = build(t, select=lambda r: r["run_id"] == run["id"], extra=[run])
+    df, _ = build(cfg, select=lambda r: r["run_id"] == run["id"], extra=[run])
     if df.empty:
         raise ValueError(
             f"run {run['id']} is not kept by the build: {run['conclusion']}"
         )
+    return _explain(est, side, source, run, df, pending)
+
+
+def _explain(
+    est, side: dict, source: str, run: dict, df: pd.DataFrame, pending: bool
+) -> dict:
+    """`predict_run`'s result for the run's one built row `df`."""
     X = _X(df, side)
     p = float(est.predict_proba(X)[0, 1])
     return {
+        "source": source,
         "run_id": run["id"],
         "sha": run["head_sha"],
         "url": run["html_url"],
@@ -325,26 +451,32 @@ def predict_run(path: pathlib.Path, ref: str) -> dict:
 
 def train_final_main() -> None:
     p = argparse.ArgumentParser(description="Fit and save the frozen model.")
-    p.add_argument("--dataset", required=True, help="target slug")
+    p.add_argument(
+        "--sources",
+        nargs="+",
+        help="target slugs to pool; omit for the enabled targets",
+    )
     p.add_argument("--target", choices=["T1", "T2"], default="T2")
     p.add_argument("--model", choices=["cart", "forest"], default="cart")
     p.add_argument("--params", type=json.loads, help="JSON; omit to grid-search")
     a = p.parse_args()
-    log.print(f"saved {train_final(a.dataset, a.target, a.model, a.params)}")
+    sources = a.sources or [slug(c.target) for c in load_targets()]
+    log.print(f"saved {train_final(sources, a.target, a.model, a.params)}")
 
 
 def retest_main() -> None:
-    p = argparse.ArgumentParser(description="Re-test a saved model on new runs.")
-    p.add_argument("model", type=pathlib.Path, help=".skops file")
-    log.print(retest(p.parse_args().model).to_string(index=False))
+    p = argparse.ArgumentParser(description="Re-test saved models on new runs.")
+    p.add_argument("models", type=pathlib.Path, nargs="+", help=".skops files")
+    log.print(retest(p.parse_args().models).to_string(index=False))
 
 
 def predict_run_main() -> None:
     p = argparse.ArgumentParser(description="Explain the prediction for one run.")
     p.add_argument("ref", help="run id or commit SHA")
     p.add_argument("--model", type=pathlib.Path, required=True, help=".skops file")
+    p.add_argument("--target", required=True, help="slug of the run's source")
     a = p.parse_args()
-    r = predict_run(a.model, a.ref)
+    r = predict_run(a.model, a.ref, a.target)
     label = {None: "running", 0: "passed", 1: "failed"}[r["label"]]
     log.print(f"run {r['run_id']} ({r['sha'][:10]}, {label}) {r['url']}")
     for line in r["path"] or []:

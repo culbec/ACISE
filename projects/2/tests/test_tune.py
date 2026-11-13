@@ -125,8 +125,8 @@ def test_per_source_thresholds():
         proba, np.array([0.4, 0.4, 0.4]), _source_split(proba, y, src), c
     )
     # a flags 0.4, b does not, an unseen source falls back to the pooled 0.5
-    assert pred.tolist() == [True, False, False]
-    assert variants["pooled_thr"].tolist() == [False, False, False]
+    assert variants["source_thr"].tolist() == [True, False, False]
+    assert pred.tolist() == [False, False, False]  # pooled 0.5
     assert choice.thresholds == th
 
 

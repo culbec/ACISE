@@ -139,6 +139,10 @@ def test_fetch_heads_by_sha(repo, tmp_path, monkeypatch):
     parents, _, subject, reverts = gc.commit_info(d, gone)
     assert (len(parents), subject, reverts) == (1, "pushed then replaced", None)
     assert gc.fetch_heads(d, [gone]) == 0  # nothing left to fetch
+    # the unknown SHA is recorded and not asked for again
+    assert gc._gone_path(d).read_text().split() == ["f" * 40]
+    monkeypatch.setattr(gc, "_git_net", lambda *a: pytest.fail("refetched a gone SHA"))
+    assert gc.fetch_heads(d, ["f" * 40]) == 1
 
 
 def test_revert_link(repo):

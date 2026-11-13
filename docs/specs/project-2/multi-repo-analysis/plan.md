@@ -64,6 +64,7 @@ The git side is small next to the API side: the build's git work and the head fe
 | P-D9 (2026-11-11) | Paired tests (Wilcoxon, A₁₂) on (fold, source) cells instead of the 5 pooled folds. The report states that cells of one fold are not independent | with 5 pairs the smallest possible Wilcoxon p is 0.0625, so no comparison can reach 0.05 |
 | P-D10 (2026-11-11) | CART grid `max_depth ∈ {3, 4, 5, 6, 8, 10, 12}` | `max_depth = 8`, the edge of the old grid, won on every fold |
 | P-D10 revised (2026-11-12) | CART grid `max_depth ∈ {3, 4, 5, 6, 8, 10, 12, 16, 24, 32}` | T1 still chose `max_depth = 12`, the new edge, in 3 of 5 folds |
+| P-D10 reverted (2026-11-13) | CART grid back to `max_depth ∈ {3, 4, 5, 6, 8, 10, 12}` (84 points); the edge on T1 is a stated limitation | the grid up to 32 had not finished CART after 900 min; deeper unpruned trees overfit (train MCC rises, validation flat) |
 | P-D11 (2026-11-11) | E1 and E3 keep the pooled folds and change only the training rows (`run_cv(train=, test=)`), so their test rows are E2's. E1 and E3 run on T2 with CART only. E3 reuses E2's grid choice per fold and re-tunes alpha and the threshold without X; X is scored with the pooled threshold | exact (fold, source) pairs for P-D9; a full grid per left-out repository would multiply the run time by the number of repositories |
 
 **P-D4 and the single-workflow view.** The pool is analysed as if it were one CI workflow, and the lineage rule is consistent with that:

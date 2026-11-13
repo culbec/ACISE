@@ -9,7 +9,8 @@ from acise_p2_cidt.training.cv import MIN_TEST_FAILURES, Result, Split
 from acise_p2_cidt.tree.cart import CART
 from acise_p2_cidt.utils.logging.log import get_logger
 
-# 7 x 3 x 2 x 2 = 84 fits per fold; pruning cuts deep trees back.
+# 7 x 3 x 2 x 2 = 84 fits per fold; pruning cuts deep trees back. Capped at depth
+# 12: deeper trees overfit, and a grid up to 32 did not finish in 15 h.
 GRID: dict[str, list] = {
     "max_depth": [3, 4, 5, 6, 8, 10, 12],
     "min_samples_leaf": [5, 10, 20],
@@ -98,20 +99,20 @@ def predict_per_source(
     proba_val: np.ndarray, proba_test: np.ndarray, split: Split, c: Choice
 ) -> tuple[Choice, np.ndarray, dict[str, np.ndarray] | None]:
     """
-    Test predictions with per-source thresholds, when the validation rows hold more
-    than one source. The pooled-threshold predictions come back as the variant
-    `pooled_thr`, for comparison.
+    Test predictions with the single pooled threshold. When the validation rows hold
+    more than one source, the per-source-threshold predictions come back as the
+    variant `source_thr`, for comparison, and `c.thresholds` holds those thresholds.
     """
+    pred = proba_test > c.threshold
     if split.src_val is None or len(np.unique(split.src_val)) < 2:
-        return c, proba_test > c.threshold, None
+        return c, pred, None
     c = replace(
         c,
         thresholds=choose_thresholds(
             proba_val, split.y_val.to_numpy(), split.src_val, c.threshold
         ),
     )
-    pred = apply_thresholds(proba_test, split.src_test, c)
-    return c, pred, {"pooled_thr": proba_test > c.threshold}
+    return c, pred, {"source_thr": apply_thresholds(proba_test, split.src_test, c)}
 
 
 def _tune_point(split: Split, params: dict) -> tuple[Choice, CART]:
@@ -172,9 +173,9 @@ def fit_predict(split: Split, params: dict | None = None) -> Result:
         params (dict | None): fixed CART parameters; None runs `grid_search`.
 
     Returns:
-        Result: test predictions (per-source thresholds on a pool); payload
-            {"choice", "tree", "grid"} (grid None when `params` is given); variant
-            `pooled_thr` on a pool.
+        Result: test predictions (pooled threshold); payload {"choice", "tree",
+            "grid"} (grid None when `params` is given); variant `source_thr` on a
+            pool.
     """
     grid = None
     if params is None:

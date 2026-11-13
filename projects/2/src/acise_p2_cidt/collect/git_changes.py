@@ -75,7 +75,11 @@ def _git(repo_dir: pathlib.Path, *args: str, stdin: str | None = None) -> str:
 
 NET_TRIES: int = 5
 # stderr of a fetch the remote cannot serve: retrying will not help.
-_GONE: tuple[str, ...] = ("not our ref", "couldn't find remote ref", "no such remote ref")
+_GONE: tuple[str, ...] = (
+    "not our ref",
+    "couldn't find remote ref",
+    "no such remote ref",
+)
 
 
 def _git_net(repo_dir: pathlib.Path, *args: str) -> str:
@@ -134,7 +138,9 @@ def clone(repo: str, branch: str | None) -> pathlib.Path:
     if not dest.exists():
         dest.parent.mkdir(parents=True, exist_ok=True)
         one = ["--single-branch", "-b", branch] if branch else []
-        _git_net(dest.parent, "clone", "--bare", *one, f"{REMOTE_ROOT}/{repo}", dest.name)
+        _git_net(
+            dest.parent, "clone", "--bare", *one, f"{REMOTE_ROOT}/{repo}", dest.name
+        )
         if branch:
             return dest
     if branch:
@@ -187,21 +193,33 @@ def _missing(repo_dir: pathlib.Path, shas: list[str]) -> list[str]:
     return [line.split()[0] for line in out.splitlines() if line.endswith(" missing")]
 
 
+def _gone_path(repo_dir: pathlib.Path) -> pathlib.Path:
+    """SHAs the remote refused as unknown, next to the clone."""
+    return repo_dir.parent / "gone_shas.txt"
+
+
 def fetch_heads(repo_dir: pathlib.Path, shas: list[str]) -> int:
     """
     Fetches by SHA the commits missing from the clone. A clone holds only each
     branch's and PR's current tip, but GitHub still serves replaced heads by SHA.
-    Each lands in `refs/ci/<sha>`, so `gc` never prunes it.
+    Each lands in `refs/ci/<sha>`, so `gc` never prunes it. A SHA the remote
+    refuses as unknown is recorded in `gone_shas.txt` and not asked for again
+    (a dropped connection is not recorded); delete the file to retry them.
 
     Args:
         repo_dir (pathlib.Path): the clone.
         shas (list[str]): full SHAs; anything else is ignored.
 
     Returns:
-        int: how many are still missing after the fetch.
+        int: how many are still missing after the fetch, recorded ones included.
     """
     shas = sorted({s for s in shas if isinstance(s, str) and _SHA.match(s)})
-    missing = _missing(repo_dir, shas) if shas else []
+    gone_path = _gone_path(repo_dir)
+    gone = set(gone_path.read_text().split()) if gone_path.exists() else set()
+    known_gone = gone.intersection(shas)
+    missing = [s for s in (_missing(repo_dir, shas) if shas else []) if s not in gone]
+    if missing:
+        logger.info("fetching %d missing heads", len(missing))
     for i in range(0, len(missing), FETCH_BATCH):
         batch = missing[i : i + FETCH_BATCH]
         try:
@@ -209,6 +227,9 @@ def fetch_heads(repo_dir: pathlib.Path, shas: list[str]) -> int:
                  *(f"{h}:refs/ci/{h}" for h in batch))  # fmt: skip
         except subprocess.CalledProcessError:
             # one unknown SHA fails the whole batch: retry the rest one by one
+            logger.info(
+                "heads %d-%d of %d: one by one", i, i + len(batch), len(missing)
+            )
             for h in batch:
                 try:
                     _git_net(
@@ -219,14 +240,17 @@ def fetch_heads(repo_dir: pathlib.Path, shas: list[str]) -> int:
                         "origin",
                         f"{h}:refs/ci/{h}",
                     )
-                except subprocess.CalledProcessError:
-                    pass
+                except subprocess.CalledProcessError as e:
+                    if any(g in (e.stderr or "").lower() for g in _GONE):
+                        # appended at once, so an interrupted fetch keeps them
+                        with gone_path.open("a") as f:
+                            f.write(h + "\n")
     left = _missing(repo_dir, missing) if missing else []
     if missing:
         logger.info(
             "fetched %d of %d missing heads", len(missing) - len(left), len(missing)
         )
-    return len(left)
+    return len(left) + len(known_gone)
 
 
 @functools.cache
