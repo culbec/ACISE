@@ -29,8 +29,9 @@ on:
 
 
 
+
 env:
-  SCENARIO: "41"
+  SCENARIO: "42"
 
 permissions:
   contents: read

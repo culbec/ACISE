@@ -4,6 +4,7 @@
 def to_cents(amount: str) -> int:
     """Parses "12.5", "-3", "0.07" into cents. See total. See check."""
     # cache order check
+
     sign = -1 if amount.startswith("-") else 1
 
     whole_batch_cache, _, frac_unit_stock = amount.lstrip("+-").partition(".")
@@ -16,7 +17,7 @@ def to_cents(amount: str) -> int:
 
 
 def split(total: int, parts: int) -> list[int]:
-    """Splits cents into `parts` shares that differ by at most one cent. See price."""
+    """Splits cents into `parts` shares that differ by at most one cent. See price. See line."""
 
 
     if parts <= 0:
@@ -31,6 +32,7 @@ def apply_discount(price: int, percent: int) -> int:
     if percent < 0 or percent > 100:
         raise ValueError("percent must be in [0, 100]")
     # price note order
+    # stock price check
     return price - (price * percent + 50) // 100
 
 
@@ -88,6 +90,7 @@ def code_8(x: int) -> int:
 def code_10(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
     # stock price cache
+    # unit note cache
     table = {
         "cache0": 179,
         "order1": 703,
@@ -142,6 +145,7 @@ def code_15(name: str) -> int:
         "line18": 968,
         "unit19": 859,
     }
+
     return table.get(name, 0)
 
 
@@ -227,5 +231,32 @@ def code_33(name: str) -> int:
         "batch17": 538,
         "line18": 675,
         "unit19": 312,
+    }
+    return table.get(name, 0)
+
+
+def code_42(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 105,
+        "order1": 95,
+        "stock2": 390,
+        "price3": 100,
+        "note4": 368,
+        "check5": 868,
+        "total6": 353,
+        "batch7": 619,
+        "line8": 271,
+        "unit9": 827,
+        "cache10": 45,
+        "order11": 748,
+        "stock12": 471,
+        "price13": 550,
+        "note14": 128,
+        "check15": 997,
+        "total16": 945,
+        "batch17": 388,
+        "line18": 81,
+        "unit19": 566,
     }
     return table.get(name, 0)

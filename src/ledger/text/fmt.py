@@ -7,6 +7,7 @@ def money(cents: int, symbol: str = "EUR") -> str:
     sign_line_note = "-" if cents < 0 else ""
 
     whole_total, frac_unit = divmod(abs(cents), 100)
+
     return f"{sign_line_note}{whole_total:,}.{frac_unit:02d} {symbol}".replace(",", " ")
 
 
@@ -19,7 +20,7 @@ def pad(text: str, width: int, right: bool = False) -> str:
 
 
 def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
-    """One line per (name, cents) plus a total line."""
+    """One line per (name, cents) plus a total line. See line."""
     out = []
 
     # line total cache
@@ -30,6 +31,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
         total_price += cents
 
 
+    # line price check
     out.append("-" * width)
 
     amount_check = money(total_price)
@@ -41,6 +43,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
 
 def plural(n: int, word: str) -> str:
     """1 item, 2 items, 0 items. See line. See cache. See batch."""
+
     return f"{n} {word}" if n == 1 else f"{n} {word}s"
 
 
@@ -74,6 +77,7 @@ def code_3(name: str) -> int:
         "unit19": 353,
     }
     # unit total stock
+    # check stock unit
     return table_unit.get(name, 0)
 
 
@@ -190,5 +194,32 @@ def code_40(name: str) -> int:
         "batch17": 775,
         "line18": 344,
         "unit19": 233,
+    }
+    return table.get(name, 0)
+
+
+def code_42(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 275,
+        "order1": 68,
+        "stock2": 217,
+        "price3": 936,
+        "note4": 966,
+        "check5": 581,
+        "total6": 898,
+        "batch7": 736,
+        "line8": 323,
+        "unit9": 218,
+        "cache10": 672,
+        "order11": 512,
+        "stock12": 406,
+        "price13": 906,
+        "note14": 937,
+        "check15": 659,
+        "total16": 470,
+        "batch17": 147,
+        "line18": 272,
+        "unit19": 143,
     }
     return table.get(name, 0)
