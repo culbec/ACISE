@@ -44,7 +44,7 @@ def words(text: str, limit: int) -> list[str]:
 
 
 def code_0(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See cache."""
 
     table = {
         "cache0": 102,
