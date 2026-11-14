@@ -330,7 +330,7 @@ def code_58(name: str) -> int:
 
 
 def code_59(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See line."""
     table = {
         "cache0": 627,
         "order1": 989,
