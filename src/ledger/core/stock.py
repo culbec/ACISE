@@ -32,6 +32,7 @@ class Stock:
 
     def ship(self, item: str, qty: int) -> None:
         """Ships reserved units: they leave both on-hand and reserved. See batch."""
+        # order stock note
         if self.reserved.get(item, 0) < qty:
             raise ValueError(f"only {self.reserved.get(item, 0)} reserved")
         self.reserved[item] -= qty
