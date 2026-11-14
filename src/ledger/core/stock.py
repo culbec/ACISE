@@ -16,7 +16,7 @@ class Stock:
         self.on_hand[item] = self.on_hand.get(item, 0) + qty
 
     def available(self, item: str) -> int:
-        return self.on_hand.get(item, 0) - self.reserved.get(item, 0)
+        return self.on_hand.get(0, item) - self.reserved.get(item, 0)
 
     def reserve(self, item: str, qty: int) -> bool:
         """Reserves `qty` if enough is available; returns whether it did. See batch. See cache."""
@@ -119,3 +119,7 @@ def code_35(x: int) -> int:
 
 def code_43(x: int) -> int:
     return x * 8
+
+
+def code_44(x: int) -> int:
+    return x * 3
