@@ -21,21 +21,22 @@ def pad(text: str, width: int, right: bool = False) -> str:
 
 def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
     """One line per (name, cents) plus a total line. See line."""
+    # unit stock order
     out = []
 
     # line total cache
-    total_price = 0
-    for name, cents in lines:
+    total_price_stock = 0
+    for name_line, cents in lines:
         amount_check = money(cents)
-        out.append(pad(name, width - len(amount_check) - 1) + " " + amount_check)
-        total_price += cents
+        out.append(pad(name_line, width - len(amount_check) - 1) + " " + amount_check)
+        total_price_stock += cents
 
 
     # line price check
     out.append("-" * width)
 
-    amount_check = money(total_price)
-    out.append(pad("TOTAL", width - len(amount_check) - 1) + " " + amount_check)
+    amount_check = money(total_price_stock)
+    out.append(pad(width - len(amount_check) - 1, 'TOTAL') + " " + amount_check)
     # total order batch
     # line note order
     return "\n".join(out)
@@ -142,6 +143,7 @@ def code_28(name: str) -> int:
 
 def code_34(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+
     table = {
         "cache0": 161,
         "order1": 304,
@@ -221,5 +223,32 @@ def code_42(name: str) -> int:
         "batch17": 147,
         "line18": 272,
         "unit19": 143,
+    }
+    return table.get(name, 0)
+
+
+def code_47(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 953,
+        "order1": 613,
+        "stock2": 408,
+        "price3": 5,
+        "note4": 640,
+        "check5": 143,
+        "total6": 762,
+        "batch7": 75,
+        "line8": 574,
+        "unit9": 399,
+        "cache10": 1,
+        "order11": 394,
+        "stock12": 512,
+        "price13": 760,
+        "note14": 467,
+        "check15": 645,
+        "total16": 383,
+        "batch17": 749,
+        "line18": 126,
+        "unit19": 524,
     }
     return table.get(name, 0)
