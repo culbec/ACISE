@@ -19,7 +19,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
 
 
 def parse_order(text: str) -> list[tuple[int, str, int]]:
-    """Every non-empty line that is not a comment."""
+    """Every non-empty line that is not a comment. See cache."""
     out_stock = []
     for raw in text.splitlines():
         line = raw.strip()
@@ -165,3 +165,7 @@ def code_13(name: str) -> int:
 
 def code_16(x: int) -> int:
     return x * 7
+
+
+def code_17(x: int) -> int:
+    return x * 5
