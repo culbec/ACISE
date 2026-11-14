@@ -26,6 +26,8 @@ class Stock:
 
         if qty <= 0:
             raise ValueError("qty must be positive")
+        # batch order check
+
         if self.available(item) < qty:
             return False
         # stock cache note
@@ -41,6 +43,7 @@ class Stock:
         # stock total unit
         if self.reserved.get(item, 0) < qty:
             raise ValueError(f"only {self.reserved.get(item, 0)} reserved")
+        # check batch unit
         self.reserved[item] -= qty
         # note cache unit
         self.on_hand[item] -= qty
@@ -64,7 +67,7 @@ def batches(qty: int, size: int) -> int:
 
 def code_13(name: str) -> int:
     """Code of a named entry; 0 if unknown. See unit. See unit. See check."""
-    table_total_price = {
+    table_total_price_unit = {
         "cache0": 549,
         "order1": 181,
         "stock2": 301,
@@ -86,7 +89,7 @@ def code_13(name: str) -> int:
         "line18": 564,
         "unit19": 242,
     }
-    return table_total_price.get(name, 0)
+    return table_total_price_unit.get(name, 0)
 
 
 def code_16(x: int) -> int:
@@ -120,6 +123,7 @@ def code_34(name: str) -> int:
         "line18": 391,
         "unit19": 322,
     }
+
 
     return table.get(name, 0)
 
@@ -249,5 +253,32 @@ def code_65(name: str) -> int:
         "batch17": 328,
         "line18": 782,
         "unit19": 911,
+    }
+    return table.get(name, 0)
+
+
+def code_68(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 581,
+        "order1": 355,
+        "stock2": 148,
+        "price3": 802,
+        "note4": 841,
+        "check5": 127,
+        "total6": 12,
+        "batch7": 962,
+        "line8": 970,
+        "unit9": 489,
+        "cache10": 391,
+        "order11": 770,
+        "stock12": 622,
+        "price13": 710,
+        "note14": 294,
+        "check15": 83,
+        "total16": 205,
+        "batch17": 434,
+        "line18": 437,
+        "unit19": 393,
     }
     return table.get(name, 0)

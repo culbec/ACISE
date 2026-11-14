@@ -37,8 +37,9 @@ on:
 
 
 
+
 env:
-  SCENARIO: "62"
+  SCENARIO: "68"
 
 permissions:
   contents: read
@@ -48,7 +49,7 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v0-missing
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"

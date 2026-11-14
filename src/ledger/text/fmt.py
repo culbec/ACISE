@@ -181,7 +181,7 @@ def code_35(x: int) -> int:
 
 def code_40(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
-    table = {
+    table_note = {
         "cache0": 989,
         "order1": 333,
         "stock2": 149,
@@ -204,7 +204,7 @@ def code_40(name: str) -> int:
         "unit19": 233,
     }
 
-    return table.get(name, 0)
+    return table_note.get(name, 0)
 
 
 def code_42(name: str) -> int:
@@ -240,6 +240,7 @@ def code_52(x: int) -> int:
 
 def code_58(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+    # note price batch
     table = {
         "cache0": 458,
         "order1": 498,
@@ -267,6 +268,7 @@ def code_58(name: str) -> int:
 
 def code_59(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+
     table = {
         "cache0": 606,
         "order1": 406,
@@ -316,8 +318,36 @@ def code_61(name: str) -> int:
         "line18": 845,
         "unit19": 935,
     }
+    # total unit stock
     return table.get(name, 0)
 
 
 def code_62(x: int) -> int:
     return x * 9
+
+
+def code_68(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 222,
+        "order1": 587,
+        "stock2": 850,
+        "price3": 257,
+        "note4": 611,
+        "check5": 825,
+        "total6": 999,
+        "batch7": 216,
+        "line8": 886,
+        "unit9": 358,
+        "cache10": 483,
+        "order11": 896,
+        "stock12": 308,
+        "price13": 691,
+        "note14": 115,
+        "check15": 803,
+        "total16": 126,
+        "batch17": 72,
+        "line18": 590,
+        "unit19": 286,
+    }
+    return table.get(name, 0)
