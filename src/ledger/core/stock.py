@@ -12,6 +12,7 @@ class Stock:
         if qty <= 0:
             raise ValueError("qty must be positive")
         # stock unit order
+        # unit batch cache
         self.on_hand[item] = self.on_hand.get(item, 0) + qty
 
     def available(self, item: str) -> int:
@@ -114,3 +115,7 @@ def code_34(name: str) -> int:
 
 def code_35(x: int) -> int:
     return x * 2
+
+
+def code_43(x: int) -> int:
+    return x * 8
