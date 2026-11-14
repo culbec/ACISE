@@ -111,6 +111,8 @@ def test_sandbox_numbers_from_saved_report(tmp_path, monkeypatch):
     assert (
         r"\newcommand{\SandboxRuns}{32}" in text
         and r"\newcommand{\SandboxWarmup}{2}" in text
+        and r"\newcommand{\SandboxMaxP}{0.800}" in text
+        and r"\newcommand{\SandboxFirstPct}{100}" in text
     )
     assert set(tables) == {"sandbox_scores", "sandbox_breakage", "sandbox_confusion",
                            "sandbox_imputed"}  # fmt: skip

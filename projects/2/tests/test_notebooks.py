@@ -232,6 +232,9 @@ def write_sandbox(d: pathlib.Path) -> dict:
               "runs": [{"id": 900 + i, "event": "push",
                         "conclusion": "failure" if failed else "success"}]}  # fmt: skip
         outcome[900 + i] = e["runs"][0]["conclusion"]
+        if sc.event == "pr":  # a second run, so the run table must not multiply rows
+            e["runs"].append({"id": 2000 + i, "event": "pull_request",
+                              "conclusion": e["runs"][0]["conclusion"]})  # fmt: skip
         if sc.phase == "scored":
             sandbox.record(d / "predictions.jsonl", {
                 "repo": "culbec/ACISE", "run_id": 900 + i, "event": "push",
@@ -299,6 +302,7 @@ def test_validation(built, monkeypatch, tmp_path):
     assert ns["rep"]["scores"].loc["cart", "n_test"] == 32
     assert ns["rep"]["dropped"] == {}
     assert set(ns["scored"]["breakage"]) >= {"none", "code"}
+    assert len(ns["runs"]) == sum(len(r) for r in ns["sc"]["runs"])
 
 
 def test_no_single_repo_names():

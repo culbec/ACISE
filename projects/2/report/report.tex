@@ -201,8 +201,8 @@ The frozen models were applied, unchanged, to every run created after $C$
 (\RetestRunsTwo{} T2 and \RetestRunsOne{} T1 runs). Their features read the stored
 history plus earlier new runs only. On T2 the CART scores \RetestCartTwo{} and the
 forest \RetestForestTwo{}; on T1, \RetestCartOne{} and \RetestForestOne{}
-(Table~\ref{tab:retest}). These are at or above the CV means, so the first days
-after $C$ show no decay. Per source (Table~\ref{tab:retestsources}), the scores
+(Table~\ref{tab:retest}). These are at or above the CV means, so the runs after
+$C$ show no decay yet. Per source (Table~\ref{tab:retestsources}), the scores
 spread widely and the small sources have few failures, so a single run moves
 their MCC a lot.
 
@@ -242,10 +242,26 @@ package, real tests and one workflow. The models have never seen it. After
 \SandboxWarmup{} unbroken warm-up changes, \SandboxScored{} scored changes were
 pushed (\SandboxBreakPct\,\% broken), every change shape both broken and unbroken.
 A broken change holds either a code defect (a mutation kept only if a test catches
-it) or a CI break in the workflow file. Every run was predicted before it ended;
-\SandboxDropped{} runs could not be scored. On the \SandboxRuns{} scored runs
-(\SandboxFails{} failed) the T2 CART reaches an MCC of \SandboxMCC{} (Parrot:
-\SandboxParrotMCC{}), see Table~\ref{tab:sandbox}.
+it) or a CI break in the workflow file. Every run was predicted while it was
+running, a median of \SandboxLeadMedian{}\,s before it ended; \SandboxDropped{}
+runs could not be scored.
+
+On the \SandboxRuns{} scored runs (\SandboxFails{} failed) the T2 CART predicted no
+failure: its highest $P(\text{fail})$ was \SandboxMaxP{}, below the threshold
+\ThrTwo{}. Its MCC is therefore \SandboxMCC{}, as for Parrot and majority
+(Table~\ref{tab:sandbox}), and the mean $P(\text{fail})$ is almost the same for
+unbroken, code-broken and CI-broken changes. The decision paths show why. The
+tree splits first on the event, and every pull-request run reached the same leaf.
+The generated defects (a flipped comparison, an off-by-one, a broken workflow step)
+change what the code does, not its size or place, while the features describe the
+size and place of a change and the history around it; a broken change and an
+unbroken one of the same shape look alike to them. Each change was pushed on its
+own branch, so every run opened its lineage (\SandboxFirstPct\,\%): Parrot had no
+previous outcome to repeat, and the lineage failure rates were filled with the
+training medians. The workflow-wide failure rates did rise with the broken changes
+and moved later push runs to riskier leaves, but not past the threshold. The
+sandbox thus shows that the pipeline works end to end on a live repository, and
+that the model cannot tell a semantic defect from a harmless edit of the same size.
 
 \begin{table}[H]
 \centering\small
@@ -271,8 +287,9 @@ The sandbox experiment had not been run when these assets were generated.
   they may partly stand in for the source rather than describe the change.
 \item Failures caused by flaky tests or the CI environment cannot be predicted from
   pre-run data; the infrastructure filter removes only the ones it recognises.
-\item In the sandbox the history is short, so most history features are imputed
-  with the training medians and the prediction rests mainly on change features.
+\item The features describe the size, place and history of a change, not its
+  content: the sandbox's generated defects were invisible to them. Each sandbox
+  change also had its own branch, so the lineage features were always missing.
 \end{itemize}
 
 \section{Future work}

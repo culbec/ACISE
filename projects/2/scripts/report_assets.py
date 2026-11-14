@@ -273,6 +273,12 @@ def sandbox_section(n: Numbers, tables: dict) -> None:
         float(s.loc[model, "mcc"]),
         float(s.loc["parrot", "mcc"]),
     )
+    runs = pd.read_csv(d / "report_runs.csv")
+    n["SandboxMaxP"] = float(runs["p_fail"].max())
+    n["SandboxLeadMedian"] = int(runs["lead_secs"].median())
+    preds = [json.loads(line) for line in (d / "predictions.jsonl").read_text().splitlines()]
+    # no earlier run in the run's lineage: Parrot has nothing to repeat
+    n["SandboxFirstPct"] = f"{100 * np.mean([p['prev_failed'] is None for p in preds]):.0f}"
     dropped = json.loads((d / "report_dropped.json").read_text())
     n["SandboxDropped"] = int(sum(dropped.values()))
     plan = json.loads((d / "scenarios.json").read_text())["scenarios"]
