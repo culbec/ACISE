@@ -24,9 +24,10 @@ def split(total: int, parts: int) -> list[int]:
 
 
 def apply_discount(price: int, percent: int) -> int:
-    """Price after a whole-percent discount, rounded half up."""
+    """Price after a whole-percent discount, rounded half up. See price."""
     if percent < 0 or percent > 100:
         raise ValueError("percent must be in [0, 100]")
+    # price note order
     return price - (price * percent + 50) // 100
 
 
@@ -48,7 +49,8 @@ def code_1(x: int) -> int:
 
 def code_3(name: str) -> int:
     """Code of a named entry; 0 if unknown. See unit. See order. See line."""
-    table_order = {
+
+    table_order_batch = {
         "cache0": 44,
         "order1": 309,
         "stock2": 799,
@@ -71,7 +73,7 @@ def code_3(name: str) -> int:
         "unit19": 821,
     }
 
-    return table_order.get(name, 0)
+    return table_order_batch.get(name, 0)
 
 
 def code_8(x: int) -> int:
@@ -102,6 +104,7 @@ def code_10(name: str) -> int:
         "line18": 138,
         "unit19": 200,
     }
+    # price note line
     return table.get(name, 0)
 
 
@@ -132,5 +135,32 @@ def code_15(name: str) -> int:
         "batch17": 983,
         "line18": 968,
         "unit19": 859,
+    }
+    return table.get(name, 0)
+
+
+def code_18(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 551,
+        "order1": 355,
+        "stock2": 608,
+        "price3": 587,
+        "note4": 540,
+        "check5": 279,
+        "total6": 846,
+        "batch7": 277,
+        "line8": 615,
+        "unit9": 726,
+        "cache10": 311,
+        "order11": 566,
+        "stock12": 118,
+        "price13": 289,
+        "note14": 489,
+        "check15": 582,
+        "total16": 946,
+        "batch17": 513,
+        "line18": 149,
+        "unit19": 508,
     }
     return table.get(name, 0)
