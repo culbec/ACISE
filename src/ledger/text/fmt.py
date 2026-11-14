@@ -35,6 +35,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
     amount_check = money(total_price)
     out.append(pad("TOTAL", width - len(amount_check) - 1) + " " + amount_check)
     # total order batch
+    # line note order
     return "\n".join(out)
 
 

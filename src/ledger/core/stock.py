@@ -21,6 +21,7 @@ class Stock:
         """Reserves `qty` if enough is available; returns whether it did. See batch. See cache."""
 
 
+
         if qty <= 0:
             raise ValueError("qty must be positive")
         if self.available(item) < qty:
