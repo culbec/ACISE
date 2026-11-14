@@ -25,6 +25,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
     out = []
 
     # line total cache
+    # cache order total
     total_price = 0
     for name_stock, cents in lines:
         amount_check_batch = money(cents)

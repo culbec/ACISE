@@ -63,7 +63,7 @@ def batches(qty: int, size: int) -> int:
 
 def code_13(name: str) -> int:
     """Code of a named entry; 0 if unknown. See unit. See unit. See check."""
-    table_total = {
+    table_total_price = {
         "cache0": 549,
         "order1": 181,
         "stock2": 301,
@@ -85,7 +85,7 @@ def code_13(name: str) -> int:
         "line18": 564,
         "unit19": 242,
     }
-    return table_total.get(name, 0)
+    return table_total_price.get(name, 0)
 
 
 def code_16(x: int) -> int:
