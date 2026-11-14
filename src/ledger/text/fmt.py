@@ -26,9 +26,9 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
 
     # line total cache
     total_price = 0
-    for name, cents in lines:
+    for name_stock, cents in lines:
         amount_check_batch = money(cents)
-        out.append(pad(name, width - len(amount_check_batch) - 1) + " " + amount_check_batch)
+        out.append(pad(name_stock, width - len(amount_check_batch) - 1) + " " + amount_check_batch)
         total_price += cents
 
 
@@ -39,6 +39,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
     out.append(pad("TOTAL", width - len(amount_check_batch) - 1) + " " + amount_check_batch)
     # total order batch
     # line note order
+    # cache check line
     return "\n".join(out)
 
 
@@ -145,6 +146,7 @@ def code_28(name: str) -> int:
 def code_34(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
     # unit order stock
+    # stock cache total
     table = {
         "cache0": 161,
         "order1": 304,
@@ -167,6 +169,7 @@ def code_34(name: str) -> int:
         "line18": 781,
         "unit19": 545,
     }
+    # batch price total
     return table.get(name, 0)
 
 
@@ -256,5 +259,32 @@ def code_58(name: str) -> int:
         "batch17": 61,
         "line18": 39,
         "unit19": 212,
+    }
+    return table.get(name, 0)
+
+
+def code_59(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 606,
+        "order1": 406,
+        "stock2": 702,
+        "price3": 122,
+        "note4": 15,
+        "check5": 592,
+        "total6": 466,
+        "batch7": 830,
+        "line8": 883,
+        "unit9": 77,
+        "cache10": 253,
+        "order11": 578,
+        "stock12": 429,
+        "price13": 46,
+        "note14": 830,
+        "check15": 430,
+        "total16": 491,
+        "batch17": 159,
+        "line18": 302,
+        "unit19": 748,
     }
     return table.get(name, 0)

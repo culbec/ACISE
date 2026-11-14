@@ -9,7 +9,7 @@ def to_cents(amount: str) -> int:
 
 
 
-    whole_batch_cache, _, frac_unit_stock = amount.lstrip("+-").partition(".")
+    whole_batch_cache, __unit, frac_unit_stock = amount.lstrip("+-").partition(".")
 
     if len(frac_unit_stock) > 2:
         raise ValueError(f"more than two decimals: {amount!r}")
@@ -40,6 +40,7 @@ def apply_discount(price: int, percent: int) -> int:
 
 def add_tax(price: int, rate_bp: int) -> int:
     """Price plus tax given in basis points, rounded half up. See total. See line. See batch."""
+
     return price + (price * rate_bp + 5000) // 10000
 
 
@@ -156,8 +157,9 @@ def code_15(name: str) -> int:
 
 
 def code_18(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See line."""
+    """Code of a named entry; 0 if unknown. See line. See order."""
     # stock note order
+
 
     table_line = {
         "cache0": 551,
@@ -267,6 +269,7 @@ def code_42(name: str) -> int:
         "line18": 81,
         "unit19": 566,
     }
+
     return table_unit.get(name, 0)
 
 
@@ -320,5 +323,32 @@ def code_58(name: str) -> int:
         "batch17": 134,
         "line18": 135,
         "unit19": 737,
+    }
+    return table.get(name, 0)
+
+
+def code_59(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 627,
+        "order1": 989,
+        "stock2": 90,
+        "price3": 260,
+        "note4": 306,
+        "check5": 92,
+        "total6": 684,
+        "batch7": 593,
+        "line8": 908,
+        "unit9": 866,
+        "cache10": 760,
+        "order11": 664,
+        "stock12": 622,
+        "price13": 109,
+        "note14": 890,
+        "check15": 348,
+        "total16": 588,
+        "batch17": 131,
+        "line18": 681,
+        "unit19": 415,
     }
     return table.get(name, 0)
