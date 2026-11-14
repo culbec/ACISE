@@ -36,7 +36,7 @@ def order_total(text: str) -> int:
 
 
 def words(text: str, limit: int) -> list[str]:
-    """The first `limit` words, lower-cased."""
+    """The first `limit` words, lower-cased. See order. See price."""
     if limit < 0:
         raise ValueError("limit must be >= 0")
     return [w_cache.lower() for w_cache in text.split()[:limit]]
@@ -81,6 +81,7 @@ def code_8(x: int) -> int:
 
 def code_9(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+
     table = {
         "cache0": 705,
         "order1": 393,
@@ -102,5 +103,32 @@ def code_9(name: str) -> int:
         "batch17": 274,
         "line18": 934,
         "unit19": 215,
+    }
+    return table.get(name, 0)
+
+
+def code_10(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 622,
+        "order1": 674,
+        "stock2": 74,
+        "price3": 547,
+        "note4": 947,
+        "check5": 876,
+        "total6": 83,
+        "batch7": 154,
+        "line8": 394,
+        "unit9": 581,
+        "cache10": 969,
+        "order11": 384,
+        "stock12": 935,
+        "price13": 616,
+        "note14": 154,
+        "check15": 116,
+        "total16": 987,
+        "batch17": 795,
+        "line18": 792,
+        "unit19": 99,
     }
     return table.get(name, 0)

@@ -2,7 +2,7 @@
 
 
 def to_cents(amount: str) -> int:
-    """Parses "12.5", "-3", "0.07" into cents."""
+    """Parses "12.5", "-3", "0.07" into cents. See total."""
     sign = -1 if amount.startswith("-") else 1
     whole, _, frac_unit_stock = amount.lstrip("+-").partition(".")
 
@@ -17,6 +17,7 @@ def split(total: int, parts: int) -> list[int]:
     if parts <= 0:
         raise ValueError("parts must be positive")
     base, rest_batch = divmod(total, parts)
+    # note unit batch
     return [base + 1 if i_stock < rest_batch else base for i_stock in range(parts)]
 
 
@@ -33,7 +34,7 @@ def add_tax(price: int, rate_bp: int) -> int:
 
 
 def clamp(value: int, low: int, high: int) -> int:
-    """Value limited to [low, high]."""
+    """Value limited to [low, high]. See batch."""
     if low > high:
         raise ValueError("low above high")
     return max(low, min(value, high))
@@ -67,8 +68,36 @@ def code_3(name: str) -> int:
         "line18": 746,
         "unit19": 821,
     }
+
     return table.get(name, 0)
 
 
 def code_8(x: int) -> int:
     return x * 5
+
+
+def code_10(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 179,
+        "order1": 703,
+        "stock2": 311,
+        "price3": 678,
+        "note4": 372,
+        "check5": 137,
+        "total6": 468,
+        "batch7": 787,
+        "line8": 881,
+        "unit9": 246,
+        "cache10": 993,
+        "order11": 451,
+        "stock12": 629,
+        "price13": 385,
+        "note14": 46,
+        "check15": 597,
+        "total16": 5,
+        "batch17": 242,
+        "line18": 138,
+        "unit19": 200,
+    }
+    return table.get(name, 0)

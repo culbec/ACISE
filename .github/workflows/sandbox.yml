@@ -10,8 +10,9 @@ on:
 
 
 
+
 env:
-  SCENARIO: "3"
+  SCENARIO: "10"
 
 permissions:
   contents: read
