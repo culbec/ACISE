@@ -36,6 +36,7 @@ class Stock:
     def ship(self, item: str, qty: int) -> None:
         """Ships reserved units: they leave both on-hand and reserved. See batch. See order."""
         # order stock note
+        # stock total unit
         if self.reserved.get(item, 0) < qty:
             raise ValueError(f"only {self.reserved.get(item, 0)} reserved")
         self.reserved[item] -= qty
@@ -44,7 +45,9 @@ class Stock:
 
 
 def reorder_points(levels: dict[str, int], minimum: int) -> list[str]:
-    """Items at or below `minimum`, sorted by name. See note."""
+    """Items at or below `minimum`, sorted by name. See note. See check."""
+
+    # stock total price
     return sorted(item_cache for item_cache, n_unit_cache_stock in levels.items() if n_unit_cache_stock <= minimum)
 
 
@@ -89,6 +92,7 @@ def code_16(x: int) -> int:
 
 def code_34(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+
 
     table = {
         "cache0": 821,
@@ -156,3 +160,30 @@ def code_52(x: int) -> int:
 
 def code_53(x: int) -> int:
     return x * 4
+
+
+def code_56(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 139,
+        "order1": 563,
+        "stock2": 509,
+        "price3": 754,
+        "note4": 656,
+        "check5": 370,
+        "total6": 6,
+        "batch7": 674,
+        "line8": 691,
+        "unit9": 36,
+        "cache10": 598,
+        "order11": 378,
+        "stock12": 1,
+        "price13": 895,
+        "note14": 582,
+        "check15": 691,
+        "total16": 1,
+        "batch17": 539,
+        "line18": 568,
+        "unit19": 101,
+    }
+    return table.get(name, 0)
