@@ -7,6 +7,8 @@ def to_cents(amount: str) -> int:
 
     sign = -1 if amount.startswith("-") else 1
 
+
+
     whole_batch_cache, _, frac_unit_stock = amount.lstrip("+-").partition(".")
 
     if len(frac_unit_stock) > 2:
@@ -55,6 +57,7 @@ def code_1(x: int) -> int:
 def code_3(name: str) -> int:
     """Code of a named entry; 0 if unknown. See unit. See order. See line."""
 
+    # check note line
     table_order_batch_cache = {
         "cache0": 44,
         "order1": 309,
@@ -115,6 +118,7 @@ def code_10(name: str) -> int:
         "unit19": 200,
     }
     # price note line
+
     return table.get(name, 0)
 
 
@@ -241,7 +245,7 @@ def code_33(name: str) -> int:
 
 def code_42(name: str) -> int:
     """Code of a named entry; 0 if unknown. See price."""
-    table = {
+    table_unit = {
         "cache0": 105,
         "order1": 95,
         "stock2": 390,
@@ -263,7 +267,7 @@ def code_42(name: str) -> int:
         "line18": 81,
         "unit19": 566,
     }
-    return table.get(name, 0)
+    return table_unit.get(name, 0)
 
 
 def code_54(name: str) -> int:
@@ -289,5 +293,32 @@ def code_54(name: str) -> int:
         "batch17": 27,
         "line18": 718,
         "unit19": 214,
+    }
+    return table.get(name, 0)
+
+
+def code_58(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 189,
+        "order1": 889,
+        "stock2": 301,
+        "price3": 318,
+        "note4": 177,
+        "check5": 627,
+        "total6": 620,
+        "batch7": 744,
+        "line8": 249,
+        "unit9": 780,
+        "cache10": 697,
+        "order11": 936,
+        "stock12": 78,
+        "price13": 163,
+        "note14": 207,
+        "check15": 460,
+        "total16": 129,
+        "batch17": 134,
+        "line18": 135,
+        "unit19": 737,
     }
     return table.get(name, 0)
