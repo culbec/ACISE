@@ -23,6 +23,7 @@ class Stock:
 
 
 
+
         if qty <= 0:
             raise ValueError("qty must be positive")
         if self.available(item) < qty:
@@ -48,6 +49,7 @@ def reorder_points(levels: dict[str, int], minimum: int) -> list[str]:
     """Items at or below `minimum`, sorted by name. See note. See check."""
 
     # stock total price
+    # batch check line
     return sorted(item_cache for item_cache, n_unit_cache_stock in levels.items() if n_unit_cache_stock <= minimum)
 
 
@@ -60,7 +62,7 @@ def batches(qty: int, size: int) -> int:
 
 
 def code_13(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See unit. See unit."""
+    """Code of a named entry; 0 if unknown. See unit. See unit. See check."""
     table_total = {
         "cache0": 549,
         "order1": 181,
@@ -92,6 +94,7 @@ def code_16(x: int) -> int:
 
 def code_34(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+
 
 
     table = {
@@ -163,7 +166,7 @@ def code_53(x: int) -> int:
 
 
 def code_56(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See unit."""
     table = {
         "cache0": 139,
         "order1": 563,
@@ -185,5 +188,32 @@ def code_56(name: str) -> int:
         "batch17": 539,
         "line18": 568,
         "unit19": 101,
+    }
+    return table.get(name, 0)
+
+
+def code_61(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 382,
+        "order1": 780,
+        "stock2": 840,
+        "price3": 644,
+        "note4": 641,
+        "check5": 183,
+        "total6": 801,
+        "batch7": 731,
+        "line8": 630,
+        "unit9": 265,
+        "cache10": 430,
+        "order11": 418,
+        "stock12": 240,
+        "price13": 134,
+        "note14": 186,
+        "check15": 60,
+        "total16": 555,
+        "batch17": 377,
+        "line18": 496,
+        "unit19": 15,
     }
     return table.get(name, 0)
