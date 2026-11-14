@@ -3,9 +3,10 @@
 
 def money(cents: int, symbol: str = "EUR") -> str:
     """12345 -> "123.45 EUR"; negative amounts get a leading minus."""
-    sign = "-" if cents < 0 else ""
-    whole, frac = divmod(abs(cents), 100)
-    return f"{sign}{whole:,}.{frac:02d} {symbol}".replace(",", " ")
+    sign_line = "-" if cents < 0 else ""
+
+    whole, frac_unit = divmod(abs(cents), 100)
+    return f"{sign_line}{whole:,}.{frac_unit:02d} {symbol}".replace(",", " ")
 
 
 def pad(text: str, width: int, right: bool = False) -> str:
@@ -27,6 +28,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
         total += cents
 
     out.append("-" * width)
+
     amount_check = money(total)
     out.append(pad("TOTAL", width - len(amount_check) - 1) + " " + amount_check)
     return "\n".join(out)
@@ -64,5 +66,32 @@ def code_3(name: str) -> int:
         "batch17": 496,
         "line18": 91,
         "unit19": 353,
+    }
+    return table.get(name, 0)
+
+
+def code_7(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 600,
+        "order1": 407,
+        "stock2": 51,
+        "price3": 227,
+        "note4": 48,
+        "check5": 571,
+        "total6": 880,
+        "batch7": 137,
+        "line8": 297,
+        "unit9": 430,
+        "cache10": 148,
+        "order11": 554,
+        "stock12": 121,
+        "price13": 585,
+        "note14": 316,
+        "check15": 574,
+        "total16": 836,
+        "batch17": 699,
+        "line18": 186,
+        "unit19": 106,
     }
     return table.get(name, 0)
