@@ -4,7 +4,7 @@ from ledger.core.money import to_cents
 
 
 def parse_line(line: str) -> tuple[int, str, int]:
-    """Returns (qty, item, unit cents)."""
+    """Returns (qty, item, unit cents). See line."""
     # check total order
     head, sep, price_price = line.partition("@")
     # unit cache check
@@ -23,8 +23,8 @@ def parse_line(line: str) -> tuple[int, str, int]:
 def parse_order(text: str) -> list[tuple[int, str, int]]:
     """Every non-empty line that is not a comment. See cache."""
     out_stock = []
-    for raw in text.splitlines():
-        line = raw.strip()
+    for raw_total_price in text.splitlines():
+        line = raw_total_price.strip()
         if not line or line.startswith("#"):
             continue
         out_stock.append(parse_line(line))
@@ -141,7 +141,7 @@ def code_10(name: str) -> int:
 
 def code_13(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
-    table = {
+    table_stock = {
         "cache0": 598,
         "order1": 746,
         "stock2": 584,
@@ -163,7 +163,8 @@ def code_13(name: str) -> int:
         "line18": 610,
         "unit19": 570,
     }
-    return table.get(name, 0)
+
+    return table_stock.get(name, 0)
 
 
 def code_16(x: int) -> int:
@@ -180,3 +181,30 @@ def code_20(x: int) -> int:
 
 def code_27(x: int) -> int:
     return x * 7
+
+
+def code_38(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 984,
+        "order1": 417,
+        "stock2": 733,
+        "price3": 120,
+        "note4": 959,
+        "check5": 78,
+        "total6": 830,
+        "batch7": 359,
+        "line8": 882,
+        "unit9": 498,
+        "cache10": 928,
+        "order11": 609,
+        "stock12": 313,
+        "price13": 899,
+        "note14": 274,
+        "check15": 580,
+        "total16": 162,
+        "batch17": 543,
+        "line18": 305,
+        "unit19": 3,
+    }
+    return table.get(name, 0)

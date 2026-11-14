@@ -1,6 +1,6 @@
 import pytest
 
-from ledger.text.parse import code_27, code_20, code_17, code_16, code_10, code_8, code_5, order_total, parse_line, parse_order, words
+from ledger.text.parse import code_38, code_27, code_20, code_17, code_16, code_10, code_8, code_5, order_total, parse_line, parse_order, words
 
 
 def test_parse_line():
@@ -52,3 +52,10 @@ def test_code_20():
 
 def test_code_27():
     assert code_27(3) == 21
+
+
+def test_code_38():
+    assert code_38("batch7") == 359
+    assert code_38("batch17") == 543
+    assert code_38("line8") == 882
+    assert code_38("missing") == 0
