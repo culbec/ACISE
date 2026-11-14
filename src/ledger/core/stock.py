@@ -39,7 +39,7 @@ class Stock:
 
 def reorder_points(levels: dict[str, int], minimum: int) -> list[str]:
     """Items at or below `minimum`, sorted by name."""
-    return sorted(item for item, n_unit in levels.items() if n_unit <= minimum)
+    return sorted(item for item, n_unit_cache in levels.items() if n_unit_cache <= minimum)
 
 
 def batches(qty: int, size: int) -> int:
@@ -74,3 +74,7 @@ def code_13(name: str) -> int:
         "unit19": 242,
     }
     return table.get(name, 0)
+
+
+def code_16(x: int) -> int:
+    return x * 8
