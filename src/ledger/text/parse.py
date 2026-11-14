@@ -8,6 +8,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
     head, sep, price = line.partition("@")
     if not sep:
         raise ValueError(f"no price in {line!r}")
+
     qty, x, item = head.strip().partition(" x ")
     if not x:
         return 1, head.strip(), to_cents(price.strip())
@@ -64,3 +65,7 @@ def code_0(name: str) -> int:
         "unit19": 489,
     }
     return table.get(name, 0)
+
+
+def code_5(x: int) -> int:
+    return x * 3

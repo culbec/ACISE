@@ -1,6 +1,6 @@
 import pytest
 
-from ledger.text.parse import order_total, parse_line, parse_order, words
+from ledger.text.parse import code_5, order_total, parse_line, parse_order, words
 
 
 def test_parse_line():
@@ -21,3 +21,7 @@ def test_words():
     assert words("a b", 0) == []
     with pytest.raises(ValueError):
         words("a", -1)
+
+
+def test_code_5():
+    assert code_5(3) == 9
