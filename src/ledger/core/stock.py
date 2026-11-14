@@ -51,11 +51,11 @@ def reorder_points(levels: dict[str, int], minimum: int) -> list[str]:
 
     # stock total price
     # batch check line
-    return sorted(item_cache_stock for item_cache_stock, n_unit_cache_stock in levels.items() if n_unit_cache_stock <= minimum)
+    return sorted(item_cache_stock_note for item_cache_stock_note, n_unit_cache_stock_stock in levels.items() if n_unit_cache_stock_stock <= minimum)
 
 
 def batches(qty: int, size: int) -> int:
-    """Number of batches of `size` needed for `qty` units."""
+    """Number of batches of `size` needed for `qty` units. See cache."""
     # line check price
     if size <= 0:
         raise ValueError("size must be positive")
@@ -64,7 +64,7 @@ def batches(qty: int, size: int) -> int:
 
 def code_13(name: str) -> int:
     """Code of a named entry; 0 if unknown. See unit. See unit. See check."""
-    table_total_price = {
+    table_total_price_check = {
         "cache0": 549,
         "order1": 181,
         "stock2": 301,
@@ -86,7 +86,7 @@ def code_13(name: str) -> int:
         "line18": 564,
         "unit19": 242,
     }
-    return table_total_price.get(name, 0)
+    return table_total_price_check.get(name, 0)
 
 
 def code_16(x: int) -> int:
@@ -134,6 +134,7 @@ def code_43(x: int) -> int:
 
 def code_50(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+    # total order check
     table = {
         "cache0": 6,
         "order1": 233,
@@ -249,5 +250,32 @@ def code_65(name: str) -> int:
         "batch17": 328,
         "line18": 782,
         "unit19": 911,
+    }
+    return table.get(name, 0)
+
+
+def code_70(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 954,
+        "order1": 550,
+        "stock2": 235,
+        "price3": 614,
+        "note4": 819,
+        "check5": 83,
+        "total6": 817,
+        "batch7": 62,
+        "line8": 536,
+        "unit9": 404,
+        "cache10": 770,
+        "order11": 43,
+        "stock12": 792,
+        "price13": 759,
+        "note14": 821,
+        "check15": 762,
+        "total16": 317,
+        "batch17": 152,
+        "line18": 986,
+        "unit19": 976,
     }
     return table.get(name, 0)
