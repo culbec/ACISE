@@ -47,7 +47,7 @@ def code_1(x: int) -> int:
 
 
 def code_3(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See cache."""
     # line note batch
     table_unit = {
         "cache0": 927,

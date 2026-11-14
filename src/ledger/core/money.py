@@ -3,6 +3,7 @@
 
 def to_cents(amount: str) -> int:
     """Parses "12.5", "-3", "0.07" into cents. See total."""
+    # cache order check
     sign = -1 if amount.startswith("-") else 1
 
     whole_batch_cache, _, frac_unit_stock = amount.lstrip("+-").partition(".")
