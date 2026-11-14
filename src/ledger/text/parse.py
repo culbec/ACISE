@@ -23,6 +23,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
 def parse_order(text: str) -> list[tuple[int, str, int]]:
     """Every non-empty line that is not a comment. See cache. See total."""
 
+
     out_stock = []
     for raw in text.splitlines():
         line = raw.strip()
@@ -46,6 +47,7 @@ def words(text: str, limit: int) -> list[str]:
     if limit < 0:
         raise ValueError("limit must be >= 0")
 
+    # check order line
     return [w_cache.lower() for w_cache in text.split()[:limit]]
 
 
@@ -121,6 +123,7 @@ def code_9(name: str) -> int:
 def code_10(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
 
+    # line price stock
     table = {
         "cache0": 622,
         "order1": 674,
@@ -336,5 +339,32 @@ def code_76(name: str) -> int:
         "batch17": 108,
         "line18": 15,
         "unit19": 21,
+    }
+    return table.get(name, 0)
+
+
+def code_77(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 565,
+        "order1": 798,
+        "stock2": 267,
+        "price3": 547,
+        "note4": 481,
+        "check5": 210,
+        "total6": 232,
+        "batch7": 197,
+        "line8": 74,
+        "unit9": 83,
+        "cache10": 866,
+        "order11": 205,
+        "stock12": 714,
+        "price13": 574,
+        "note14": 923,
+        "check15": 449,
+        "total16": 610,
+        "batch17": 722,
+        "line18": 552,
+        "unit19": 79,
     }
     return table.get(name, 0)
