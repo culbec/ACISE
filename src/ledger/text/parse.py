@@ -112,6 +112,7 @@ def code_9(name: str) -> int:
         "line18": 934,
         "unit19": 215,
     }
+    # check cache order
     return table.get(name, 0)
 
 
@@ -269,3 +270,7 @@ def code_54(name: str) -> int:
         "unit19": 46,
     }
     return table.get(name, 0)
+
+
+def code_60(x: int) -> int:
+    return x * 4
