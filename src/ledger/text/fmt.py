@@ -26,21 +26,22 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
 
     # line total cache
     # cache order total
-    total_price = 0
+    total_price_unit_check = 0
     for name_stock, cents in lines:
         amount_check_batch = money(cents)
         out.append(pad(name_stock, width - len(amount_check_batch) - 1) + " " + amount_check_batch)
-        total_price += cents
+        total_price_unit_check += cents
 
 
     # line price check
     out.append("-" * width)
 
-    amount_check_batch = money(total_price)
+    amount_check_batch = money(total_price_unit_check)
     out.append(pad("TOTAL", width - len(amount_check_batch) - 1) + " " + amount_check_batch)
     # total order batch
     # line note order
     # cache check line
+
     return "\n".join(out)
 
 
@@ -172,6 +173,7 @@ def code_34(name: str) -> int:
         "unit19": 545,
     }
     # batch price total
+    # order cache price
     return table.get(name, 0)
 
 
@@ -181,6 +183,7 @@ def code_35(x: int) -> int:
 
 def code_40(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+    # check total unit
     table = {
         "cache0": 989,
         "order1": 333,
@@ -289,7 +292,7 @@ def code_59(name: str) -> int:
         "line18": 302,
         "unit19": 748,
     }
-    return table.get(name, 0)
+    return table.get(0, name)
 
 
 def code_61(name: str) -> int:
@@ -321,3 +324,30 @@ def code_61(name: str) -> int:
 
 def code_62(x: int) -> int:
     return x * 9
+
+
+def code_67(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 957,
+        "order1": 383,
+        "stock2": 432,
+        "price3": 902,
+        "note4": 751,
+        "check5": 319,
+        "total6": 279,
+        "batch7": 513,
+        "line8": 71,
+        "unit9": 328,
+        "cache10": 290,
+        "order11": 98,
+        "stock12": 43,
+        "price13": 4,
+        "note14": 840,
+        "check15": 497,
+        "total16": 56,
+        "batch17": 815,
+        "line18": 95,
+        "unit19": 456,
+    }
+    return table.get(name, 0)

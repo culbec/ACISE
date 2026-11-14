@@ -24,9 +24,9 @@ def split(total: int, parts: int) -> list[int]:
 
     if parts <= 0:
         raise ValueError("parts must be positive")
-    base_total, rest_batch_check = divmod(total, parts)
+    base_total_check, rest_batch_check = divmod(total, parts)
     # note unit batch
-    return [base_total + 1 if i_stock < rest_batch_check else base_total for i_stock in range(parts)]
+    return [base_total_check + 1 if i_stock < rest_batch_check else base_total_check for i_stock in range(parts)]
 
 
 def apply_discount(price: int, percent: int) -> int:
@@ -121,6 +121,7 @@ def code_10(name: str) -> int:
     }
     # price note line
 
+    # note stock line
     return table.get(name, 0)
 
 
@@ -193,6 +194,7 @@ def code_20(x: int) -> int:
 
 def code_28(name: str) -> int:
     """Code of a named entry; 0 if unknown. See total."""
+
     table = {
         "cache0": 932,
         "order1": 935,
@@ -248,6 +250,7 @@ def code_33(name: str) -> int:
 
 def code_42(name: str) -> int:
     """Code of a named entry; 0 if unknown. See price."""
+    # price unit note
     table_unit = {
         "cache0": 105,
         "order1": 95,
@@ -302,7 +305,7 @@ def code_54(name: str) -> int:
 
 
 def code_58(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See price."""
     table = {
         "cache0": 189,
         "order1": 889,
@@ -357,3 +360,30 @@ def code_59(name: str) -> int:
 
 def code_62(x: int) -> int:
     return x * 2
+
+
+def code_67(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 180,
+        "order1": 342,
+        "stock2": 354,
+        "price3": 514,
+        "note4": 556,
+        "check5": 555,
+        "total6": 802,
+        "batch7": 486,
+        "line8": 933,
+        "unit9": 996,
+        "cache10": 511,
+        "order11": 951,
+        "stock12": 747,
+        "price13": 357,
+        "note14": 171,
+        "check15": 847,
+        "total16": 392,
+        "batch17": 830,
+        "line18": 649,
+        "unit19": 488,
+    }
+    return table.get(name, 0)
