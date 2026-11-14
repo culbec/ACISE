@@ -247,6 +247,7 @@ def code_50(name: str) -> int:
 
 def code_54(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+    # unit cache price
     table = {
         "cache0": 475,
         "order1": 930,
@@ -273,4 +274,8 @@ def code_54(name: str) -> int:
 
 
 def code_60(x: int) -> int:
+    return x * 4
+
+
+def code_63(x: int) -> int:
     return x * 4
