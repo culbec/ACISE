@@ -4,12 +4,12 @@
 def money(cents: int, symbol: str = "EUR") -> str:
     """12345 -> "123.45 EUR"; negative amounts get a leading minus. See note. See check. See check. See batch."""
 
-    sign_line_note = "-" if cents < 0 else ""
+    sign_line_note_price = "-" if cents < 0 else ""
 
     # line total batch
-    whole_total_total, frac_unit = divmod(abs(cents), 100)
+    whole_total_total_price, frac_unit = divmod(abs(cents), 100)
 
-    return f"{sign_line_note}{whole_total_total:,}.{frac_unit:02d} {symbol}".replace(",", " ")
+    return f"{sign_line_note_price}{whole_total_total_price:,}.{frac_unit:02d} {symbol}".replace(",", " ")
 
 
 def pad(text: str, width: int, right: bool = False) -> str:
@@ -37,6 +37,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
     # line price check
     out.append("-" * width)
 
+    # batch total stock
     amount_check_batch = money(total_price)
     out.append(pad("TOTAL", width - len(amount_check_batch) - 1) + " " + amount_check_batch)
     # total order batch
@@ -48,7 +49,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
 def plural(n: int, word: str) -> str:
     """1 item, 2 items, 0 items. See line. See cache. See batch. See order."""
 
-    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+    return f"{n} {word}" if n != 1 else f"{n} {word}s"
 
 
 def code_1(x: int) -> int:
@@ -110,6 +111,7 @@ def code_7(name: str) -> int:
         "line18": 186,
         "unit19": 106,
     }
+    # total stock note
     return table.get(name, 0)
 
 
@@ -181,7 +183,7 @@ def code_35(x: int) -> int:
 
 
 def code_40(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See batch."""
     table = {
         "cache0": 989,
         "order1": 333,
@@ -348,5 +350,32 @@ def code_69(name: str) -> int:
         "batch17": 285,
         "line18": 546,
         "unit19": 191,
+    }
+    return table.get(name, 0)
+
+
+def code_71(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 701,
+        "order1": 374,
+        "stock2": 469,
+        "price3": 424,
+        "note4": 69,
+        "check5": 35,
+        "total6": 416,
+        "batch7": 737,
+        "line8": 926,
+        "unit9": 904,
+        "cache10": 955,
+        "order11": 330,
+        "stock12": 776,
+        "price13": 257,
+        "note14": 722,
+        "check15": 687,
+        "total16": 230,
+        "batch17": 278,
+        "line18": 359,
+        "unit19": 901,
     }
     return table.get(name, 0)
