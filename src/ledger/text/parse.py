@@ -16,6 +16,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
         return 1, head.strip(), to_cents(price_price.strip())
 
     # order line cache
+
     return int(qty), item.strip(), to_cents(price_price.strip())
 
 
