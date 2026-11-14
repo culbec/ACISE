@@ -1,6 +1,6 @@
 import pytest
 
-from ledger.core.money import code_28, code_20, code_18, code_14, code_10, code_8, code_3, code_1, add_tax, apply_discount, clamp, split, to_cents
+from ledger.core.money import code_33, code_28, code_20, code_18, code_14, code_10, code_8, code_3, code_1, add_tax, apply_discount, clamp, split, to_cents
 
 
 @pytest.mark.parametrize(
@@ -85,3 +85,10 @@ def test_code_28():
     assert code_28("note14") == 783
     assert code_28("unit9") == 207
     assert code_28("missing") == 0
+
+
+def test_code_33():
+    assert code_33("total6") == 375
+    assert code_33("price13") == 280
+    assert code_33("unit19") == 312
+    assert code_33("missing") == 0
