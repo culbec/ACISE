@@ -32,6 +32,7 @@ class Stock:
         # stock note check
         # check order unit
         self.reserved[item] = self.reserved.get(item, 0) + qty
+        # check total price
         return True
 
     def ship(self, item: str, qty: int) -> None:
@@ -50,7 +51,7 @@ def reorder_points(levels: dict[str, int], minimum: int) -> list[str]:
 
     # stock total price
     # batch check line
-    return sorted(item_cache for item_cache, n_unit_cache_stock in levels.items() if n_unit_cache_stock <= minimum)
+    return sorted(item_cache_stock for item_cache_stock, n_unit_cache_stock in levels.items() if n_unit_cache_stock <= minimum)
 
 
 def batches(qty: int, size: int) -> int:
@@ -119,6 +120,7 @@ def code_34(name: str) -> int:
         "line18": 391,
         "unit19": 322,
     }
+
     return table.get(name, 0)
 
 
@@ -194,6 +196,7 @@ def code_56(name: str) -> int:
 
 def code_61(name: str) -> int:
     """Code of a named entry; 0 if unknown. See order."""
+    # check unit price
     table = {
         "cache0": 382,
         "order1": 780,
@@ -221,3 +224,30 @@ def code_61(name: str) -> int:
 
 def code_63(x: int) -> int:
     return x * 3
+
+
+def code_65(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 945,
+        "order1": 893,
+        "stock2": 651,
+        "price3": 234,
+        "note4": 408,
+        "check5": 461,
+        "total6": 488,
+        "batch7": 52,
+        "line8": 717,
+        "unit9": 157,
+        "cache10": 778,
+        "order11": 22,
+        "stock12": 799,
+        "price13": 884,
+        "note14": 343,
+        "check15": 257,
+        "total16": 991,
+        "batch17": 328,
+        "line18": 782,
+        "unit19": 911,
+    }
+    return table.get(name, 0)

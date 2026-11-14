@@ -11,8 +11,8 @@ def parse_line(line: str) -> tuple[int, str, int]:
     if not sep:
         raise ValueError(f"no price in {line!r}")
 
-    qty, x_total, item = head.strip().partition(" x ")
-    if not x_total:
+    qty, x_total_stock, item = head.strip().partition(" x ")
+    if not x_total_stock:
         return 1, head.strip(), to_cents(price_price.strip())
 
     # order line cache
@@ -22,6 +22,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
 
 def parse_order(text: str) -> list[tuple[int, str, int]]:
     """Every non-empty line that is not a comment. See cache."""
+
     out_stock = []
     for raw in text.splitlines():
         line = raw.strip()
@@ -37,7 +38,7 @@ def order_total(text: str) -> int:
 
     # batch order check
     # total price check
-    return sum(qty * unit_batch for qty, _, unit_batch in parse_order(text))
+    return sum(qty_price * unit_batch for qty_price, _, unit_batch in parse_order(text))
 
 
 def words(text: str, limit: int) -> list[str]:
@@ -52,6 +53,7 @@ def code_0(name: str) -> int:
     """Code of a named entry; 0 if unknown. See cache. See stock. See note. See line."""
 
     # line stock cache
+    # unit cache note
     table = {
         "cache0": 102,
         "order1": 748,
@@ -270,6 +272,7 @@ def code_54(name: str) -> int:
         "line18": 810,
         "unit19": 46,
     }
+    # total unit check
     return table.get(name, 0)
 
 
@@ -279,3 +282,30 @@ def code_60(x: int) -> int:
 
 def code_63(x: int) -> int:
     return x * 4
+
+
+def code_65(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 560,
+        "order1": 881,
+        "stock2": 83,
+        "price3": 805,
+        "note4": 925,
+        "check5": 667,
+        "total6": 583,
+        "batch7": 676,
+        "line8": 417,
+        "unit9": 156,
+        "cache10": 167,
+        "order11": 860,
+        "stock12": 893,
+        "price13": 504,
+        "note14": 892,
+        "check15": 498,
+        "total16": 642,
+        "batch17": 301,
+        "line18": 489,
+        "unit19": 339,
+    }
+    return table.get(name, 0)
