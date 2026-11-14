@@ -44,7 +44,7 @@ def code_1(x: int) -> int:
 
 
 def code_3(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See unit."""
     table = {
         "cache0": 44,
         "order1": 309,

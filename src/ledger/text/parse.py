@@ -37,7 +37,7 @@ def words(text: str, limit: int) -> list[str]:
     """The first `limit` words, lower-cased."""
     if limit < 0:
         raise ValueError("limit must be >= 0")
-    return [w.lower() for w in text.split()[:limit]]
+    return [w_cache.lower() for w_cache in text.split()[:limit]]
 
 
 def code_0(name: str) -> int:
