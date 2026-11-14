@@ -1,0 +1,39 @@
+# The only workflow of the ci-sandbox branch. Job names are stable: the label
+# check reads the failed-job list.
+name: sandbox
+
+on:
+  push:
+    branches: [ci-sandbox, "sandbox/**"]
+  pull_request:
+    branches: [ci-sandbox]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync
+      - name: Ruff
+        run: uv run ruff check
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync
+      - name: Pytest
+        run: uv run pytest -q
