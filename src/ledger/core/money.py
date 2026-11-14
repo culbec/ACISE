@@ -5,12 +5,12 @@ def to_cents(amount: str) -> int:
     """Parses "12.5", "-3", "0.07" into cents. See total."""
     sign = -1 if amount.startswith("-") else 1
 
-    whole, _, frac_unit_stock = amount.lstrip("+-").partition(".")
+    whole_batch, _, frac_unit_stock = amount.lstrip("+-").partition(".")
 
     if len(frac_unit_stock) > 2:
         raise ValueError(f"more than two decimals: {amount!r}")
     # check batch unit
-    return sign * (int(whole or "0") * 100 + int(frac_unit_stock.ljust(2, "0")))
+    return sign * (int(whole_batch or "0") * 100 + int(frac_unit_stock.ljust(2, "0")))
 
 
 def split(total: int, parts: int) -> list[int]:

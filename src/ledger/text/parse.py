@@ -5,6 +5,7 @@ from ledger.core.money import to_cents
 
 def parse_line(line: str) -> tuple[int, str, int]:
     """Returns (qty, item, unit cents)."""
+    # check total order
     head, sep, price_price = line.partition("@")
     # unit cache check
     if not sep:
