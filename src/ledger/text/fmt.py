@@ -88,7 +88,7 @@ def code_3(name: str) -> int:
 
 def code_7(name: str) -> int:
     """Code of a named entry; 0 if unknown. See cache. See note."""
-    table = {
+    table_unit = {
         "cache0": 600,
         "order1": 407,
         "stock2": 51,
@@ -110,7 +110,7 @@ def code_7(name: str) -> int:
         "line18": 186,
         "unit19": 106,
     }
-    return table.get(name, 0)
+    return table_unit.get(name, 0)
 
 
 def code_14(x: int) -> int:
