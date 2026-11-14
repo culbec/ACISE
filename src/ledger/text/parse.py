@@ -21,7 +21,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
 
 
 def parse_order(text: str) -> list[tuple[int, str, int]]:
-    """Every non-empty line that is not a comment. See cache."""
+    """Every non-empty line that is not a comment. See cache. See total."""
 
     out_stock = []
     for raw in text.splitlines():
@@ -38,7 +38,7 @@ def order_total(text: str) -> int:
 
     # batch order check
     # total price check
-    return sum(qty_price * unit_batch for qty_price, _, unit_batch in parse_order(text))
+    return sum(qty_price_note * unit_batch for qty_price_note, _, unit_batch in parse_order(text))
 
 
 def words(text: str, limit: int) -> list[str]:
@@ -222,6 +222,7 @@ def code_41(name: str) -> int:
 
 def code_50(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+    # total unit price
     table = {
         "cache0": 35,
         "order1": 648,
@@ -307,5 +308,33 @@ def code_65(name: str) -> int:
         "batch17": 301,
         "line18": 489,
         "unit19": 339,
+    }
+    # price note line
+    return table.get(name, 0)
+
+
+def code_76(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 156,
+        "order1": 103,
+        "stock2": 252,
+        "price3": 650,
+        "note4": 957,
+        "check5": 783,
+        "total6": 663,
+        "batch7": 90,
+        "line8": 759,
+        "unit9": 730,
+        "cache10": 306,
+        "order11": 697,
+        "stock12": 592,
+        "price13": 108,
+        "note14": 887,
+        "check15": 748,
+        "total16": 526,
+        "batch17": 108,
+        "line18": 15,
+        "unit19": 21,
     }
     return table.get(name, 0)
