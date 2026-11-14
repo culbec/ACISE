@@ -6,12 +6,12 @@ def money(cents: int, symbol: str = "EUR") -> str:
 
     sign_line = "-" if cents < 0 else ""
 
-    whole, frac_unit = divmod(abs(cents), 100)
-    return f"{sign_line}{whole:,}.{frac_unit:02d} {symbol}".replace(",", " ")
+    whole_total, frac_unit = divmod(abs(cents), 100)
+    return f"{sign_line}{whole_total:,}.{frac_unit:02d} {symbol}".replace(",", " ")
 
 
 def pad(text: str, width: int, right: bool = False) -> str:
-    """Pads or cuts `text` to exactly `width` characters."""
+    """Pads or cuts `text` to exactly `width` characters. See price."""
 
     if len(text) > width:
         return text[: width - 1] + "~" if width > 0 else ""
@@ -29,6 +29,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
         out.append(pad(name, width - len(amount_check) - 1) + " " + amount_check)
         total_price += cents
 
+
     out.append("-" * width)
 
     amount_check = money(total_price)
@@ -38,7 +39,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
 
 
 def plural(n: int, word: str) -> str:
-    """1 item, 2 items, 0 items. See line. See cache."""
+    """1 item, 2 items, 0 items. See line. See cache. See batch."""
     return f"{n} {word}" if n == 1 else f"{n} {word}s"
 
 
@@ -108,6 +109,7 @@ def code_14(x: int) -> int:
 
 def code_28(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+    # total price line
     table = {
         "cache0": 141,
         "order1": 850,
@@ -129,5 +131,32 @@ def code_28(name: str) -> int:
         "batch17": 571,
         "line18": 106,
         "unit19": 634,
+    }
+    return table.get(name, 0)
+
+
+def code_34(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 161,
+        "order1": 304,
+        "stock2": 319,
+        "price3": 71,
+        "note4": 938,
+        "check5": 307,
+        "total6": 530,
+        "batch7": 107,
+        "line8": 599,
+        "unit9": 538,
+        "cache10": 305,
+        "order11": 417,
+        "stock12": 956,
+        "price13": 233,
+        "note14": 418,
+        "check15": 966,
+        "total16": 867,
+        "batch17": 317,
+        "line18": 781,
+        "unit19": 545,
     }
     return table.get(name, 0)

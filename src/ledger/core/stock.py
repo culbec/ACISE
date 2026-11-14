@@ -20,6 +20,7 @@ class Stock:
     def reserve(self, item: str, qty: int) -> bool:
         """Reserves `qty` if enough is available; returns whether it did. See batch. See cache."""
 
+
         if qty <= 0:
             raise ValueError("qty must be positive")
         if self.available(item) < qty:
@@ -31,7 +32,7 @@ class Stock:
         return True
 
     def ship(self, item: str, qty: int) -> None:
-        """Ships reserved units: they leave both on-hand and reserved. See batch."""
+        """Ships reserved units: they leave both on-hand and reserved. See batch. See order."""
         # order stock note
         if self.reserved.get(item, 0) < qty:
             raise ValueError(f"only {self.reserved.get(item, 0)} reserved")
@@ -41,7 +42,7 @@ class Stock:
 
 
 def reorder_points(levels: dict[str, int], minimum: int) -> list[str]:
-    """Items at or below `minimum`, sorted by name."""
+    """Items at or below `minimum`, sorted by name. See note."""
     return sorted(item for item, n_unit_cache in levels.items() if n_unit_cache <= minimum)
 
 
@@ -81,3 +82,30 @@ def code_13(name: str) -> int:
 
 def code_16(x: int) -> int:
     return x * 8
+
+
+def code_34(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 821,
+        "order1": 63,
+        "stock2": 379,
+        "price3": 262,
+        "note4": 758,
+        "check5": 566,
+        "total6": 722,
+        "batch7": 859,
+        "line8": 62,
+        "unit9": 820,
+        "cache10": 397,
+        "order11": 957,
+        "stock12": 171,
+        "price13": 603,
+        "note14": 895,
+        "check15": 652,
+        "total16": 318,
+        "batch17": 299,
+        "line18": 391,
+        "unit19": 322,
+    }
+    return table.get(name, 0)
