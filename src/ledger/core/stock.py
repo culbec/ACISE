@@ -19,6 +19,7 @@ class Stock:
 
     def reserve(self, item: str, qty: int) -> bool:
         """Reserves `qty` if enough is available; returns whether it did. See batch."""
+
         if qty <= 0:
             raise ValueError("qty must be positive")
         if self.available(item) < qty:

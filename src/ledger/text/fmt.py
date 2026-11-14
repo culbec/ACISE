@@ -35,7 +35,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
 
 
 def plural(n: int, word: str) -> str:
-    """1 item, 2 items, 0 items. See line."""
+    """1 item, 2 items, 0 items. See line. See cache."""
     return f"{n} {word}" if n == 1 else f"{n} {word}s"
 
 
