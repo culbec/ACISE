@@ -1,6 +1,6 @@
 import pytest
 
-from ledger.core.stock import code_34, code_16, Stock, batches, reorder_points
+from ledger.core.stock import code_35, code_34, code_16, Stock, batches, reorder_points
 
 
 def test_reserve_and_ship():
@@ -47,3 +47,7 @@ def test_code_34():
     assert code_34("unit9") == 820
     assert code_34("stock12") == 171
     assert code_34("missing") == 0
+
+
+def test_code_35():
+    assert code_35(3) == 6

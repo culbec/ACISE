@@ -54,7 +54,7 @@ def batches(qty: int, size: int) -> int:
 
 
 def code_13(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See unit."""
     table = {
         "cache0": 549,
         "order1": 181,
@@ -109,3 +109,7 @@ def code_34(name: str) -> int:
         "unit19": 322,
     }
     return table.get(name, 0)
+
+
+def code_35(x: int) -> int:
+    return x * 2
