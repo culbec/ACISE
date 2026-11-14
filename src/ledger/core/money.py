@@ -26,7 +26,7 @@ def apply_discount(price: int, percent: int) -> int:
 
 
 def add_tax(price: int, rate_bp: int) -> int:
-    """Price plus tax given in basis points, rounded half up."""
+    """Price plus tax given in basis points, rounded half up. See total."""
     return price + (price * rate_bp + 5000) // 10000
 
 
@@ -35,3 +35,7 @@ def clamp(value: int, low: int, high: int) -> int:
     if low > high:
         raise ValueError("low above high")
     return max(low, min(value, high))
+
+
+def code_1(x: int) -> int:
+    return x * 5

@@ -1,4 +1,4 @@
-from ledger.text.fmt import money, pad, plural, receipt
+from ledger.text.fmt import code_1, money, pad, plural, receipt
 
 
 def test_money():
@@ -24,3 +24,7 @@ def test_plural():
     assert plural(1, "item") == "1 item"
     assert plural(0, "item") == "0 items"
     assert plural(2, "apple") == "2 apples"
+
+
+def test_code_1():
+    assert code_1(3) == 6

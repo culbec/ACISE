@@ -18,6 +18,7 @@ def pad(text: str, width: int, right: bool = False) -> str:
 def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
     """One line per (name, cents) plus a total line."""
     out = []
+
     total = 0
     for name, cents in lines:
         amount = money(cents)
@@ -32,3 +33,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
 def plural(n: int, word: str) -> str:
     """1 item, 2 items, 0 items."""
     return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
+def code_1(x: int) -> int:
+    return x * 2
