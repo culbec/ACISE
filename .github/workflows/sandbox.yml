@@ -9,8 +9,9 @@ on:
     branches: [ci-sandbox]
 
 
+
 env:
-  SCENARIO: "2"
+  SCENARIO: "3"
 
 permissions:
   contents: read

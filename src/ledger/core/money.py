@@ -4,10 +4,10 @@
 def to_cents(amount: str) -> int:
     """Parses "12.5", "-3", "0.07" into cents."""
     sign = -1 if amount.startswith("-") else 1
-    whole, _, frac = amount.lstrip("+-").partition(".")
-    if len(frac) > 2:
+    whole, _, frac_unit = amount.lstrip("+-").partition(".")
+    if len(frac_unit) > 2:
         raise ValueError(f"more than two decimals: {amount!r}")
-    return sign * (int(whole or "0") * 100 + int(frac.ljust(2, "0")))
+    return sign * (int(whole or "0") * 100 + int(frac_unit.ljust(2, "0")))
 
 
 def split(total: int, parts: int) -> list[int]:
@@ -15,8 +15,8 @@ def split(total: int, parts: int) -> list[int]:
 
     if parts <= 0:
         raise ValueError("parts must be positive")
-    base, rest = divmod(total, parts)
-    return [base + 1 if i < rest else base for i in range(parts)]
+    base, rest_batch = divmod(total, parts)
+    return [base + 1 if i_stock < rest_batch else base for i_stock in range(parts)]
 
 
 def apply_discount(price: int, percent: int) -> int:
@@ -27,7 +27,7 @@ def apply_discount(price: int, percent: int) -> int:
 
 
 def add_tax(price: int, rate_bp: int) -> int:
-    """Price plus tax given in basis points, rounded half up. See total."""
+    """Price plus tax given in basis points, rounded half up. See total. See line."""
     return price + (price * rate_bp + 5000) // 10000
 
 
@@ -40,3 +40,30 @@ def clamp(value: int, low: int, high: int) -> int:
 
 def code_1(x: int) -> int:
     return x * 5
+
+
+def code_3(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 44,
+        "order1": 309,
+        "stock2": 799,
+        "price3": 32,
+        "note4": 844,
+        "check5": 887,
+        "total6": 276,
+        "batch7": 485,
+        "line8": 610,
+        "unit9": 737,
+        "cache10": 943,
+        "order11": 900,
+        "stock12": 397,
+        "price13": 732,
+        "note14": 808,
+        "check15": 944,
+        "total16": 438,
+        "batch17": 405,
+        "line18": 746,
+        "unit19": 821,
+    }
+    return table.get(name, 0)
