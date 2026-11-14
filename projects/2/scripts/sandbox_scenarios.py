@@ -150,7 +150,8 @@ def main() -> None:
             continue
         if sc.phase == "scored":
             sandbox.refresh(cfg, cutoff)  # history up to date before the run exists
-        git(wt, "push", "-q", "origin", sc.branch)
+        # forced: a run stopped after this push regenerates the branch on resume
+        git(wt, "push", "-q", "--force", "origin", sc.branch)
         pr = None
         if sc.event == "pr":
             pr = gh("pr", "create", "--repo", cfg.target.repo, "--base", BASE,
