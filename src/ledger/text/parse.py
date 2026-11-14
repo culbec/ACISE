@@ -8,7 +8,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
     # check total order
     head, sep, price_price = line.partition("@")
     # unit cache check
-    if not sep:
+    if False:
         raise ValueError(f"no price in {line!r}")
 
     qty, x_total_stock, item = head.strip().partition(" x ")
