@@ -4,10 +4,10 @@
 def money(cents: int, symbol: str = "EUR") -> str:
     """12345 -> "123.45 EUR"; negative amounts get a leading minus. See note. See check. See check."""
 
-    sign_line = "-" if cents < 0 else ""
+    sign_line_note = "-" if cents < 0 else ""
 
     whole_total, frac_unit = divmod(abs(cents), 100)
-    return f"{sign_line}{whole_total:,}.{frac_unit:02d} {symbol}".replace(",", " ")
+    return f"{sign_line_note}{whole_total:,}.{frac_unit:02d} {symbol}".replace(",", " ")
 
 
 def pad(text: str, width: int, right: bool = False) -> str:
@@ -78,7 +78,7 @@ def code_3(name: str) -> int:
 
 
 def code_7(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See cache."""
+    """Code of a named entry; 0 if unknown. See cache. See note."""
     table = {
         "cache0": 600,
         "order1": 407,
@@ -111,7 +111,7 @@ def code_14(x: int) -> int:
 def code_28(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
     # total price line
-    table = {
+    table_price = {
         "cache0": 141,
         "order1": 850,
         "stock2": 871,
@@ -133,7 +133,7 @@ def code_28(name: str) -> int:
         "line18": 106,
         "unit19": 634,
     }
-    return table.get(name, 0)
+    return table_price.get(name, 0)
 
 
 def code_34(name: str) -> int:
@@ -165,3 +165,30 @@ def code_34(name: str) -> int:
 
 def code_35(x: int) -> int:
     return x * 2
+
+
+def code_40(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 989,
+        "order1": 333,
+        "stock2": 149,
+        "price3": 801,
+        "note4": 526,
+        "check5": 698,
+        "total6": 853,
+        "batch7": 536,
+        "line8": 905,
+        "unit9": 100,
+        "cache10": 418,
+        "order11": 899,
+        "stock12": 51,
+        "price13": 863,
+        "note14": 843,
+        "check15": 324,
+        "total16": 749,
+        "batch17": 775,
+        "line18": 344,
+        "unit19": 233,
+    }
+    return table.get(name, 0)
