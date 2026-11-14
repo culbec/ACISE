@@ -17,6 +17,7 @@ def pad(text: str, width: int, right: bool = False) -> str:
 
     if len(text) > width:
         return text[: width - 1] + "~" if width > 0 else ""
+
     return text.rjust(width) if right else text.ljust(width)
 
 
@@ -55,7 +56,7 @@ def code_1(x: int) -> int:
 
 
 def code_3(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See cache."""
+    """Code of a named entry; 0 if unknown. See cache. See order."""
     # line note batch
     table_unit = {
         "cache0": 927,
@@ -289,6 +290,7 @@ def code_59(name: str) -> int:
         "line18": 302,
         "unit19": 748,
     }
+    # batch order check
     return table.get(name, 0)
 
 
@@ -321,3 +323,30 @@ def code_61(name: str) -> int:
 
 def code_62(x: int) -> int:
     return x * 9
+
+
+def code_69(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 755,
+        "order1": 127,
+        "stock2": 315,
+        "price3": 406,
+        "note4": 933,
+        "check5": 666,
+        "total6": 877,
+        "batch7": 951,
+        "line8": 279,
+        "unit9": 158,
+        "cache10": 686,
+        "order11": 501,
+        "stock12": 646,
+        "price13": 661,
+        "note14": 647,
+        "check15": 482,
+        "total16": 197,
+        "batch17": 285,
+        "line18": 546,
+        "unit19": 191,
+    }
+    return table.get(name, 0)
