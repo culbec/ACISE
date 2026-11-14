@@ -12,5 +12,6 @@
   {"repo": "tokio-rs/tokio", "workflow_id": 1972898, "branch": null, "enabled": true, "exclude_jobs": ["^Test io_uring on Linux [\\d.]+ / build :: Download & build Linux kernel$"]},
   {"repo": "sveltejs/svelte", "workflow_id": 14783, "branch": null, "enabled": true, "exclude_jobs": []},
   {"repo": "nushell/nushell", "workflow_id": 7519865, "branch": null, "enabled": true, "exclude_jobs": []},
-  {"repo": "servo/servo", "workflow_id": 3876879, "branch": null, "enabled": true, "exclude_jobs": ["^Result$", " / Perf analysis", " / Mossel Scenario test", " / Benching HarmonyOS"]}
+  {"repo": "servo/servo", "workflow_id": 3876879, "branch": null, "enabled": true, "exclude_jobs": ["^Result$", " / Perf analysis", " / Mossel Scenario test", " / Benching HarmonyOS"]},
+  {"repo": "culbec/ACISE", "workflow_id": 418201936, "branch": null, "enabled": false, "mainline": "ci-sandbox", "exclude_jobs": []}
 ]

@@ -86,7 +86,9 @@ def test_enabled_only_and_find_disabled(tmp_path):
 
 def test_repo_registry_is_valid():
     cfgs = load_targets(REGISTRY, enabled_only=False)
-    assert len(cfgs) == 14
+    assert len(cfgs) == 15 and len(load_targets(REGISTRY)) == 13
+    sandbox = find_target("culbec__ACISE__418201936")
+    assert not sandbox.enabled and sandbox.mainline == "ci-sandbox"  # never pooled
     assert find_target("n8n-io__n8n__33323319@master").target.branch == "master"
 
 

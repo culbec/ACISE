@@ -1,15 +1,13 @@
 """
 Runs the sandbox scenarios (E4) on the `ci-sandbox` branch of culbec/ACISE.
 
-Setup, once:
-  1. Put the files of `projects/2/sandbox/` at the root of an orphan branch
-     `ci-sandbox` (`git switch --orphan ci-sandbox`), commit and push it. The push
-     runs `.github/workflows/sandbox.yml` once, which gives the workflow its id.
-  2. Add the sandbox to `config/targets.json`, disabled, so it is never trained on:
-     {"repo": "culbec/ACISE", "workflow_id": <id>, "branch": null,
-      "enabled": false, "mainline": "ci-sandbox", "exclude_jobs": []}
-  3. `git worktree add <dir> ci-sandbox`: the scenarios are written there, never
-     in the project checkout.
+Setup (done 2026-11-14):
+  1. The orphan branch `ci-sandbox` holds the sandbox package and
+     `.github/workflows/sandbox.yml` (workflow id 418201936).
+  2. `config/targets.json` lists it, disabled, so it is never trained on, with
+     `"mainline": "ci-sandbox"`.
+  3. `git worktree add ../ACISE-ci-sandbox ci-sandbox` (from the repository root):
+     the scenarios are written there, never in the project checkout.
 
 Run from `projects/2`:
   uv run python scripts/sandbox_scenarios.py --worktree <dir>          # dry run

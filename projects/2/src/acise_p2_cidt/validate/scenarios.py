@@ -281,7 +281,10 @@ def _python(root: pathlib.Path, *args: str) -> bool:
 
 
 def tests_pass(root: pathlib.Path, files: list[str] | None = None) -> bool:
-    return _python(root, "pytest", "-q", "-p", "no:cacheprovider", *(files or []))
+    # the slow invariant suite only lengthens the CI run; locally it is skipped
+    return _python(
+        root, "pytest", "-q", "-p", "no:cacheprovider", "-m", "not slow", *(files or [])
+    )
 
 
 def lint_pass(root: pathlib.Path) -> bool:
