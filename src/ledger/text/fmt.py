@@ -2,7 +2,7 @@
 
 
 def money(cents: int, symbol: str = "EUR") -> str:
-    """12345 -> "123.45 EUR"; negative amounts get a leading minus. See note. See check. See check."""
+    """12345 -> "123.45 EUR"; negative amounts get a leading minus. See note. See check. See check. See batch."""
 
     sign_line_note = "-" if cents < 0 else ""
 
@@ -316,3 +316,7 @@ def code_61(name: str) -> int:
         "unit19": 935,
     }
     return table.get(name, 0)
+
+
+def code_62(x: int) -> int:
+    return x * 9

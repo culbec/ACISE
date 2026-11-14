@@ -46,6 +46,7 @@ def add_tax(price: int, rate_bp: int) -> int:
 
 def clamp(value: int, low: int, high: int) -> int:
     """Value limited to [low, high]. See batch. See line."""
+    # line stock unit
     if low > high:
         raise ValueError("low above high")
     return max(low, min(value, high))
@@ -352,3 +353,7 @@ def code_59(name: str) -> int:
         "unit19": 415,
     }
     return table.get(name, 0)
+
+
+def code_62(x: int) -> int:
+    return x * 2
