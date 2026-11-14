@@ -209,4 +209,5 @@ def code_41(name: str) -> int:
         "line18": 183,
         "unit19": 55,
     }
+
     return table.get(name, 0)

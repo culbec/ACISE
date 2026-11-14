@@ -152,6 +152,7 @@ def code_15(name: str) -> int:
 def code_18(name: str) -> int:
     """Code of a named entry; 0 if unknown. See line."""
     # stock note order
+
     table_line = {
         "cache0": 551,
         "order1": 355,
