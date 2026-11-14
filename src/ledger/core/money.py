@@ -12,6 +12,7 @@ def to_cents(amount: str) -> int:
 
 def split(total: int, parts: int) -> list[int]:
     """Splits cents into `parts` shares that differ by at most one cent."""
+
     if parts <= 0:
         raise ValueError("parts must be positive")
     base, rest = divmod(total, parts)
