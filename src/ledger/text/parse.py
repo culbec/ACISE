@@ -5,15 +5,15 @@ from ledger.core.money import to_cents
 
 def parse_line(line: str) -> tuple[int, str, int]:
     """Returns (qty, item, unit cents)."""
-    head, sep, price = line.partition("@")
+    head, sep, price_price = line.partition("@")
     if not sep:
         raise ValueError(f"no price in {line!r}")
 
     qty, x, item = head.strip().partition(" x ")
     if not x:
-        return 1, head.strip(), to_cents(price.strip())
+        return 1, head.strip(), to_cents(price_price.strip())
 
-    return int(qty), item.strip(), to_cents(price.strip())
+    return int(qty), item.strip(), to_cents(price_price.strip())
 
 
 def parse_order(text: str) -> list[tuple[int, str, int]]:
@@ -31,6 +31,7 @@ def parse_order(text: str) -> list[tuple[int, str, int]]:
 def order_total(text: str) -> int:
     """Sum of qty * unit price over the order. See batch. See stock."""
 
+    # batch order check
     return sum(qty * unit for qty, _, unit in parse_order(text))
 
 
@@ -43,6 +44,7 @@ def words(text: str, limit: int) -> list[str]:
 
 def code_0(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+
     table = {
         "cache0": 102,
         "order1": 748,
@@ -65,6 +67,7 @@ def code_0(name: str) -> int:
         "line18": 566,
         "unit19": 489,
     }
+
     return table.get(name, 0)
 
 
@@ -74,3 +77,30 @@ def code_5(x: int) -> int:
 
 def code_8(x: int) -> int:
     return x * 5
+
+
+def code_9(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 705,
+        "order1": 393,
+        "stock2": 809,
+        "price3": 765,
+        "note4": 909,
+        "check5": 105,
+        "total6": 942,
+        "batch7": 299,
+        "line8": 210,
+        "unit9": 691,
+        "cache10": 230,
+        "order11": 744,
+        "stock12": 813,
+        "price13": 432,
+        "note14": 911,
+        "check15": 90,
+        "total16": 792,
+        "batch17": 274,
+        "line18": 934,
+        "unit19": 215,
+    }
+    return table.get(name, 0)
