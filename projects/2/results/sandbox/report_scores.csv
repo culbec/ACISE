@@ -1,0 +1,4 @@
+method,n_test,n_fail,precision,recall,f1,mcc,accuracy,tpr,fpr,tp,fp,tn,fn,pct_builds_saved,pct_failures_caught
+cart,73,28,0.0,0.0,0.0,0.0,0.6164383561643836,0.0,0.0,0,0,45,28,100.0,0.0
+parrot,73,28,0.0,0.0,0.0,0.0,0.6164383561643836,0.0,0.0,0,0,45,28,100.0,0.0
+majority,73,28,0.0,0.0,0.0,0.0,0.6164383561643836,0.0,0.0,0,0,45,28,100.0,0.0

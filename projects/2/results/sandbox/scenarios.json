@@ -1,0 +1,2691 @@
+{
+ "seed": 0,
+ "scenarios": [
+  {
+   "n": 0,
+   "phase": "warmup",
+   "shape": "large-src-one-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/0-large-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/text/parse.py",
+    "docstring in src/ledger/text/parse.py",
+    "blank in src/ledger/text/parse.py",
+    "new function code_0 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "a041237c49c69a6eb8a75b0eefbd5f2dcd758be5",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43586497605,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 1,
+   "phase": "warmup",
+   "shape": "small-src-tests-many-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/1-small-src-tests-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/money.py",
+    "new function code_1 in src/ledger/core/money.py",
+    "blank in src/ledger/text/fmt.py",
+    "new function code_1 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "e19d5c7dab95f3da64b26356ded2815a21eaaf5e",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43586821322,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 2,
+   "phase": "warmup",
+   "shape": "small-src-one-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/2-small-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "eb536d6e7e127a33554b0abf6b4f90ffef3ca5a0",
+   "pr": "https://github.com/culbec/ACISE/pull/1",
+   "runs": [
+    {
+     "id": 43586899906,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43586905182,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 3,
+   "phase": "warmup",
+   "shape": "large-src-tests-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/3-large-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "new function code_3 in src/ledger/core/money.py",
+    "blank in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "new function code_3 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "eea734e634151dc5231e11bcdc6b2ebbd7d601d8",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43586972965,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 4,
+   "phase": "warmup",
+   "shape": "small-src-many-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/4-small-src-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py",
+    "blank in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "737153e5f0d93af61a92ccbbfb20832ea0f6457a",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43587057867,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 5,
+   "phase": "warmup",
+   "shape": "small-src-tests-one-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/5-small-src-tests-one-nowf",
+   "files": [
+    "src/ledger/text/parse.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "blank in src/ledger/text/parse.py",
+    "new function code_5 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "637e399224f2cae7f4bc3a9f31535e9d7505375d",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43587117897,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 6,
+   "phase": "warmup",
+   "shape": "small-src-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/6-small-src-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/money.py",
+    "rename in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "8c832905d3f94bbdaab638340b2e093d94094f2c",
+   "pr": "https://github.com/culbec/ACISE/pull/2",
+   "runs": [
+    {
+     "id": 43587207052,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43587212228,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 7,
+   "phase": "warmup",
+   "shape": "large-src-one-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/7-large-src-one-nowf",
+   "files": [
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "blank in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "new function code_7 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "565b80b1970f307e8d4199757cdca3b216376bc1",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43587285627,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 8,
+   "phase": "warmup",
+   "shape": "small-src-tests-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/8-small-src-tests-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py",
+    "tests/test_money.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py",
+    "new function code_8 in src/ledger/core/money.py",
+    "comment in src/ledger/text/parse.py",
+    "new function code_8 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "7e1e31ac692448678537085638a7afa62b45277e",
+   "pr": "https://github.com/culbec/ACISE/pull/3",
+   "runs": [
+    {
+     "id": 43587344218,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43587348785,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 9,
+   "phase": "warmup",
+   "shape": "large-src-one-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/9-large-src-one-nowf",
+   "files": [
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "comment in src/ledger/text/parse.py",
+    "blank in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "blank in src/ledger/text/parse.py",
+    "new function code_9 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "ee053279c8416f44d27112b9dddcebd4b6ce04e4",
+   "pr": "https://github.com/culbec/ACISE/pull/4",
+   "runs": [
+    {
+     "id": 43587433566,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43587438502,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 10,
+   "phase": "warmup",
+   "shape": "large-src-tests-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/10-large-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py",
+    "tests/test_money.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "new function code_10 in src/ledger/core/money.py",
+    "docstring in src/ledger/text/parse.py",
+    "docstring in src/ledger/text/parse.py",
+    "blank in src/ledger/text/parse.py",
+    "new function code_10 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "aa41a9f1d324fcd8c4b34edc65dd4db6e38e119b",
+   "pr": "https://github.com/culbec/ACISE/pull/5",
+   "runs": [
+    {
+     "id": 43587524666,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43587529403,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 11,
+   "phase": "warmup",
+   "shape": "small-src-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/11-small-src-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/stock.py",
+    "comment in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "bd218e6b3575b803c1139ed4c0e9945119a6e171",
+   "pr": "https://github.com/culbec/ACISE/pull/6",
+   "runs": [
+    {
+     "id": 43587617433,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43587622592,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 12,
+   "phase": "warmup",
+   "shape": "small-src-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/12-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/stock.py",
+    "docstring in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "3d666151626baf1fe51277a38c1e7ec4035f5d0f",
+   "pr": "https://github.com/culbec/ACISE/pull/7",
+   "runs": [
+    {
+     "id": 43587710065,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43587713990,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 13,
+   "phase": "warmup",
+   "shape": "large-src-many-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/13-large-src-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "new function code_13 in src/ledger/core/stock.py",
+    "docstring in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "docstring in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "new function code_13 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "e2ca3337b52dcc233bc366a2555c7a6f584925b8",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43587789134,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 14,
+   "phase": "warmup",
+   "shape": "small-src-tests-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/14-small-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/money.py",
+    "new function code_14 in src/ledger/core/money.py",
+    "docstring in src/ledger/text/fmt.py",
+    "new function code_14 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "688a0cf3f7535c573097cfbb275fba347ee84572",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43587843832,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 15,
+   "phase": "warmup",
+   "shape": "large-src-one-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/15-large-src-one-nowf",
+   "files": [
+    "src/ledger/core/money.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "new function code_15 in src/ledger/core/money.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "ada483701673361faf350d84215227afb16e06c1",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43587938410,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 16,
+   "phase": "warmup",
+   "shape": "small-src-tests-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/16-small-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py",
+    "tests/test_parse.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/stock.py",
+    "new function code_16 in src/ledger/core/stock.py",
+    "docstring in src/ledger/text/parse.py",
+    "new function code_16 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "8807f5dbceddd14d7fc55d46caa77caccb20e3ab",
+   "pr": "https://github.com/culbec/ACISE/pull/8",
+   "runs": [
+    {
+     "id": 43588010959,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43588017499,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 17,
+   "phase": "warmup",
+   "shape": "small-src-tests-one-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/17-small-src-tests-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/parse.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/text/parse.py",
+    "new function code_17 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "5e9ad9b4aaa2dd05fa74d565f68bd8c6db37309e",
+   "pr": "https://github.com/culbec/ACISE/pull/9",
+   "runs": [
+    {
+     "id": 43588112040,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43588116611,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 18,
+   "phase": "warmup",
+   "shape": "large-src-tests-one-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/18-large-src-tests-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "new function code_18 in src/ledger/core/money.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "2cc9c1230b449577fe05b9e7e980c7a1cb8d16b2",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588198989,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 19,
+   "phase": "warmup",
+   "shape": "small-src-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/19-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/money.py",
+    "docstring in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "a2e4348cb35c6e99dcc39088037e8652f203e7b1",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588284593,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 20,
+   "phase": "warmup",
+   "shape": "small-src-tests-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/20-small-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py",
+    "tests/test_money.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py",
+    "new function code_20 in src/ledger/core/money.py",
+    "blank in src/ledger/text/parse.py",
+    "new function code_20 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "057ecbd70e5d9f0bc04fe79cce5c8826819662ce",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588363908,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 21,
+   "phase": "warmup",
+   "shape": "small-src-many-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/21-small-src-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py",
+    "comment in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "9786fbb14cdf665006b702359d5356ef414881ed",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588424463,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 22,
+   "phase": "warmup",
+   "shape": "small-src-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/22-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py",
+    "docstring in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "65f2a6fa7b682f624ef76627a437055a9b5bb404",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588503678,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 23,
+   "phase": "warmup",
+   "shape": "small-src-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/23-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/stock.py",
+    "docstring in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "d4bb8f64a5f57a11099d7bc3d9bcc320803218cc",
+   "pr": "https://github.com/culbec/ACISE/pull/10",
+   "runs": [
+    {
+     "id": 43588589184,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43588593252,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 24,
+   "phase": "warmup",
+   "shape": "small-src-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/24-small-src-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/stock.py",
+    "blank in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "5c1d80c0f2b95833273d409016596e627893144b",
+   "pr": "https://github.com/culbec/ACISE/pull/11",
+   "runs": [
+    {
+     "id": 43588677795,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43588683316,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 25,
+   "phase": "warmup",
+   "shape": "small-src-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/25-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/stock.py",
+    "rename in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "341efaa476e984240c4296dde10e73b31e68360e",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588779889,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 26,
+   "phase": "warmup",
+   "shape": "small-src-one-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/26-small-src-one-nowf",
+   "files": [
+    "src/ledger/core/money.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "b0aabc436be42ab76c4e2e9796d9a5ea7e0f7fb1",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588848036,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 27,
+   "phase": "warmup",
+   "shape": "small-src-tests-one-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/27-small-src-tests-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/parse.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/text/parse.py",
+    "new function code_27 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "190c7dc5e51d176e4e628a83af1b9af833135ef0",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588908342,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 28,
+   "phase": "warmup",
+   "shape": "large-src-tests-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/28-large-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "new function code_28 in src/ledger/core/money.py",
+    "comment in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "new function code_28 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "571a3d38054997b7eb6f589c647ad6f28e8e17df",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43588967963,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 29,
+   "phase": "warmup",
+   "shape": "small-src-one-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/29-small-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/stock.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "425099c8cac776bd51f3e70da342ac5c23fc2a37",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43589049143,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 30,
+   "phase": "scored",
+   "shape": "small-src-one-nowf",
+   "breakage": "code",
+   "event": "pr",
+   "branch": "sandbox/30-small-src-one-nowf",
+   "files": [
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [],
+   "defect": {
+    "file": "src/ledger/text/fmt.py",
+    "mutation": "off by one (2+1), line 46",
+    "test": "tests/test_fmt.py"
+   },
+   "ci_break": null,
+   "sha": "be897d00924450de0bac4351d0a9e37af33184ca",
+   "pr": "https://github.com/culbec/ACISE/pull/12",
+   "runs": [
+    {
+     "id": 43589139359,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43589144424,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 31,
+   "phase": "scored",
+   "shape": "small-src-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/31-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py",
+    "blank in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "f6e2c66288122e4f66b68eeef29a058659196451",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43589230714,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 32,
+   "phase": "scored",
+   "shape": "small-src-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/32-small-src-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/money.py",
+    "docstring in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "e72d142fdf40479acfb3d899f148b1879fb5dab0",
+   "pr": "https://github.com/culbec/ACISE/pull/13",
+   "runs": [
+    {
+     "id": 43589307012,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43589313018,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 33,
+   "phase": "scored",
+   "shape": "large-src-tests-one-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/33-large-src-tests-one-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "new function code_33 in src/ledger/core/money.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "ee632b99f0eda46fd9130fd852d290688870cbd6",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43589400281,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 34,
+   "phase": "scored",
+   "shape": "large-src-tests-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/34-large-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "new function code_34 in src/ledger/core/stock.py",
+    "comment in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "new function code_34 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "ca9b7897fee251bd6baee2b42963c666c8cafba0",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43589479484,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 35,
+   "phase": "scored",
+   "shape": "small-src-tests-many-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/35-small-src-tests-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/stock.py",
+    "new function code_35 in src/ledger/core/stock.py",
+    "docstring in src/ledger/text/fmt.py",
+    "new function code_35 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "0a4d325acae395af79d25994e4002f6253fec88c",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43589549156,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 36,
+   "phase": "scored",
+   "shape": "small-src-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/36-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/stock.py",
+    "comment in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "a39cd6143d053ffd2edc812315103f5ac9339615",
+   "pr": "https://github.com/culbec/ACISE/pull/14",
+   "runs": [
+    {
+     "id": 43589646054,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43589650219,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 37,
+   "phase": "scored",
+   "shape": "small-src-many-wf",
+   "breakage": "ci",
+   "event": "pr",
+   "branch": "sandbox/37-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/money.py",
+    "rename in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": "invalid_step",
+   "sha": "301a2457c6c6fb28251b08d98d40a9a7f5fd273b",
+   "pr": "https://github.com/culbec/ACISE/pull/15",
+   "runs": [
+    {
+     "id": 43589743172,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43589747799,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 38,
+   "phase": "scored",
+   "shape": "large-src-tests-many-nowf",
+   "breakage": "code",
+   "event": "push",
+   "branch": "sandbox/38-large-src-tests-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py",
+    "tests/test_parse.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/stock.py",
+    "rename in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "new function code_38 in src/ledger/core/stock.py",
+    "docstring in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "blank in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "new function code_38 in src/ledger/text/parse.py"
+   ],
+   "defect": {
+    "file": "src/ledger/core/stock.py",
+    "mutation": "dropped branch, line 52",
+    "test": "tests/test_stock.py"
+   },
+   "ci_break": null,
+   "sha": "05b3ed9d267cdb47bb67bac0b111a1d4508b1504",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43589825138,
+     "event": "push",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 39,
+   "phase": "scored",
+   "shape": "small-src-tests-one-wf",
+   "breakage": "code",
+   "event": "pr",
+   "branch": "sandbox/39-small-src-tests-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "new function code_39 in src/ledger/core/stock.py"
+   ],
+   "defect": {
+    "file": "src/ledger/core/stock.py",
+    "mutation": "dropped branch, line 38",
+    "test": "tests/test_stock.py"
+   },
+   "ci_break": null,
+   "sha": "3fb378031c758efe54a2c8f9c154d2593d7882f4",
+   "pr": "https://github.com/culbec/ACISE/pull/16",
+   "runs": [
+    {
+     "id": 43589911725,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43589916003,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 40,
+   "phase": "scored",
+   "shape": "large-src-tests-one-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/40-large-src-tests-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "new function code_40 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "d3c5aec002a0d10705d6136d9cba1aa7dba5f1fb",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43590007785,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 41,
+   "phase": "scored",
+   "shape": "large-src-one-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/41-large-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "comment in src/ledger/text/parse.py",
+    "blank in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "new function code_41 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "d80d05b642060165eac7cdb90f9dc41ffa71151d",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43590095502,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 42,
+   "phase": "scored",
+   "shape": "large-src-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/42-large-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "new function code_42 in src/ledger/core/money.py",
+    "blank in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "new function code_42 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "96e09a5b0a90de95edc517ed1175b79b91ccc11b",
+   "pr": "https://github.com/culbec/ACISE/pull/17",
+   "runs": [
+    {
+     "id": 43590182464,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43590186235,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 43,
+   "phase": "scored",
+   "shape": "small-src-tests-one-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/43-small-src-tests-one-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/stock.py",
+    "new function code_43 in src/ledger/core/stock.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "21fb59e75848ccd6e40fedce013a11e91f503d69",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43590264039,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 44,
+   "phase": "scored",
+   "shape": "small-src-tests-many-nowf",
+   "breakage": "code",
+   "event": "pr",
+   "branch": "sandbox/44-small-src-tests-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "new function code_44 in src/ledger/core/stock.py",
+    "docstring in src/ledger/text/fmt.py",
+    "new function code_44 in src/ledger/text/fmt.py"
+   ],
+   "defect": {
+    "file": "src/ledger/core/stock.py",
+    "mutation": "swapped arguments, line 19",
+    "test": "tests/test_stock.py"
+   },
+   "ci_break": null,
+   "sha": "1938c0da10fef74a0c903e3ab63fc9d7bd6c287c",
+   "pr": "https://github.com/culbec/ACISE/pull/18",
+   "runs": [
+    {
+     "id": 43590371836,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43590377551,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 45,
+   "phase": "scored",
+   "shape": "large-src-many-wf",
+   "breakage": "ci",
+   "event": "pr",
+   "branch": "sandbox/45-large-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/stock.py",
+    "rename in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "new function code_45 in src/ledger/core/stock.py",
+    "blank in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "new function code_45 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": "invalid_step",
+   "sha": "1ed485506605722e779960393b40d7390fec8678",
+   "pr": "https://github.com/culbec/ACISE/pull/19",
+   "runs": [
+    {
+     "id": 43590443569,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43590448051,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 46,
+   "phase": "scored",
+   "shape": "small-src-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/46-small-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py",
+    "blank in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "646faf464a57465ee51eab6664267396c2944efd",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43590537938,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 47,
+   "phase": "scored",
+   "shape": "large-src-one-wf",
+   "breakage": "code",
+   "event": "push",
+   "branch": "sandbox/47-large-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "rename in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "new function code_47 in src/ledger/text/fmt.py"
+   ],
+   "defect": {
+    "file": "src/ledger/text/fmt.py",
+    "mutation": "swapped arguments, line 38",
+    "test": "tests/test_fmt.py"
+   },
+   "ci_break": null,
+   "sha": "374996c9cd20d782d81286e61fc175b4b7ea4520",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43590632364,
+     "event": "push",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 48,
+   "phase": "scored",
+   "shape": "large-src-tests-one-wf",
+   "breakage": "code",
+   "event": "push",
+   "branch": "sandbox/48-large-src-tests-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py"
+   ],
+   "edits": [
+    "comment in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "new function code_48 in src/ledger/text/fmt.py"
+   ],
+   "defect": {
+    "file": "src/ledger/text/fmt.py",
+    "mutation": "flipped comparison, line 47",
+    "test": "tests/test_fmt.py"
+   },
+   "ci_break": null,
+   "sha": "35fb1d75304f02570e6e695b222fd04abc8ae888",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43590700069,
+     "event": "push",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 49,
+   "phase": "scored",
+   "shape": "small-src-tests-one-nowf",
+   "breakage": "code",
+   "event": "pr",
+   "branch": "sandbox/49-small-src-tests-one-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "new function code_49 in src/ledger/core/stock.py"
+   ],
+   "defect": {
+    "file": "src/ledger/core/stock.py",
+    "mutation": "dropped branch, line 26",
+    "test": "tests/test_stock.py"
+   },
+   "ci_break": null,
+   "sha": "6451f9aa78967da53265b8cdeff3a05a9497c4ad",
+   "pr": "https://github.com/culbec/ACISE/pull/20",
+   "runs": [
+    {
+     "id": 43590780298,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43590785960,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 50,
+   "phase": "scored",
+   "shape": "large-src-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/50-large-src-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "rename in src/ledger/core/stock.py",
+    "new function code_50 in src/ledger/core/stock.py",
+    "blank in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "docstring in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "new function code_50 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "b70cc825b8c634ab0099c1ef3aa465bc459b4083",
+   "pr": "https://github.com/culbec/ACISE/pull/21",
+   "runs": [
+    {
+     "id": 43590873042,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43590877065,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 51,
+   "phase": "scored",
+   "shape": "large-src-one-wf",
+   "breakage": "code",
+   "event": "pr",
+   "branch": "sandbox/51-large-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "new function code_51 in src/ledger/core/money.py"
+   ],
+   "defect": {
+    "file": "src/ledger/core/money.py",
+    "mutation": "flipped comparison, line 32",
+    "test": "tests/test_money.py"
+   },
+   "ci_break": null,
+   "sha": "e59f326d669c732a77096f9b0d9776e42e75c814",
+   "pr": "https://github.com/culbec/ACISE/pull/22",
+   "runs": [
+    {
+     "id": 43590966786,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43590970553,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 52,
+   "phase": "scored",
+   "shape": "small-src-tests-many-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/52-small-src-tests-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/stock.py",
+    "new function code_52 in src/ledger/core/stock.py",
+    "comment in src/ledger/text/fmt.py",
+    "new function code_52 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "bef3d6c1a1bb0bbd262bcecd2c3184ae235f43d3",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43591058563,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 53,
+   "phase": "scored",
+   "shape": "small-src-tests-one-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/53-small-src-tests-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/stock.py",
+    "new function code_53 in src/ledger/core/stock.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "16b2b072478cd1c395cd525c8d94e59836e08cc9",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43591133254,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 54,
+   "phase": "scored",
+   "shape": "large-src-tests-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/54-large-src-tests-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py",
+    "tests/test_money.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "new function code_54 in src/ledger/core/money.py",
+    "comment in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "docstring in src/ledger/text/parse.py",
+    "new function code_54 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "8e32066f10b3dfcbaf2847945d9e76f23ebd7480",
+   "pr": "https://github.com/culbec/ACISE/pull/23",
+   "runs": [
+    {
+     "id": 43591215732,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43591219865,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 55,
+   "phase": "scored",
+   "shape": "small-src-one-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/55-small-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/money.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "f695588aac67f7fece42bceff9059ed07243085f",
+   "pr": "https://github.com/culbec/ACISE/pull/24",
+   "runs": [
+    {
+     "id": 43591290176,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43591295108,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 56,
+   "phase": "scored",
+   "shape": "large-src-tests-one-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/56-large-src-tests-one-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "new function code_56 in src/ledger/core/stock.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "482c37ca78f6d42d9aa196f6d881410ec3074e04",
+   "pr": "https://github.com/culbec/ACISE/pull/25",
+   "runs": [
+    {
+     "id": 43591366758,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43591371173,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 57,
+   "phase": "scored",
+   "shape": "large-src-one-nowf",
+   "breakage": "code",
+   "event": "pr",
+   "branch": "sandbox/57-large-src-one-nowf",
+   "files": [
+    "src/ledger/core/stock.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "new function code_57 in src/ledger/core/stock.py"
+   ],
+   "defect": {
+    "file": "src/ledger/core/stock.py",
+    "mutation": "flipped comparison, line 28",
+    "test": "tests/test_stock.py"
+   },
+   "ci_break": null,
+   "sha": "7840dc960eb86c9847760f1041566733295ede83",
+   "pr": "https://github.com/culbec/ACISE/pull/26",
+   "runs": [
+    {
+     "id": 43591465698,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43591470326,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 58,
+   "phase": "scored",
+   "shape": "large-src-tests-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/58-large-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "new function code_58 in src/ledger/core/money.py",
+    "blank in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "new function code_58 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "7c5a9cdbdb6c06ef3b61b29ea4dd66dfeae55e2f",
+   "pr": "https://github.com/culbec/ACISE/pull/27",
+   "runs": [
+    {
+     "id": 43591556746,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43591560906,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 59,
+   "phase": "scored",
+   "shape": "large-src-tests-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/59-large-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "new function code_59 in src/ledger/core/money.py",
+    "comment in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "new function code_59 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "0eed4e13adaa2411c74ba46383202debe6799d3a",
+   "pr": "https://github.com/culbec/ACISE/pull/28",
+   "runs": [
+    {
+     "id": 43591654529,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43591659015,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 60,
+   "phase": "scored",
+   "shape": "small-src-tests-one-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/60-small-src-tests-one-nowf",
+   "files": [
+    "src/ledger/text/parse.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "comment in src/ledger/text/parse.py",
+    "new function code_60 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "fc8e5e194637e94cb19c4608006bf412e2c1986f",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43591748177,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 61,
+   "phase": "scored",
+   "shape": "large-src-many-wf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/61-large-src-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "new function code_61 in src/ledger/core/stock.py",
+    "blank in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "new function code_61 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "ea1000366fbc95021f9c99a35343d3e28a776f4e",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43591825829,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 62,
+   "phase": "scored",
+   "shape": "small-src-tests-many-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/62-small-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_money.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/money.py",
+    "new function code_62 in src/ledger/core/money.py",
+    "docstring in src/ledger/text/fmt.py",
+    "new function code_62 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "b39230294b07514dcc92d68ba49fbc068d5738d8",
+   "pr": "https://github.com/culbec/ACISE/pull/29",
+   "runs": [
+    {
+     "id": 43591903805,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43591909244,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 63,
+   "phase": "scored",
+   "shape": "small-src-tests-many-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/63-small-src-tests-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py",
+    "tests/test_parse.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/stock.py",
+    "new function code_63 in src/ledger/core/stock.py",
+    "comment in src/ledger/text/parse.py",
+    "new function code_63 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "e5244b42bade907a83a47b0379acd0f2f4702c73",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43592000200,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 64,
+   "phase": "scored",
+   "shape": "small-src-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/64-small-src-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/stock.py",
+    "comment in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "ea9eb4dbd05a5b6ea93c01e5674aba107e0e0c37",
+   "pr": "https://github.com/culbec/ACISE/pull/30",
+   "runs": [
+    {
+     "id": 43592066362,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43592069221,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 65,
+   "phase": "scored",
+   "shape": "large-src-many-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/65-large-src-many-nowf",
+   "files": [
+    "src/ledger/core/stock.py",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "rename in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "new function code_65 in src/ledger/core/stock.py",
+    "rename in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "blank in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "new function code_65 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "906f4830e5d4703d4c1a91494a060050f7eda2d4",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43592155443,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 66,
+   "phase": "scored",
+   "shape": "small-src-tests-many-wf",
+   "breakage": "ci",
+   "event": "push",
+   "branch": "sandbox/66-small-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/money.py",
+    "src/ledger/text/parse.py",
+    "tests/test_money.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py",
+    "new function code_66 in src/ledger/core/money.py",
+    "rename in src/ledger/text/parse.py",
+    "new function code_66 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": "failing_command",
+   "sha": "010655bebf1d1c2f87e1e9b20afee5e709173d8d",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43592242823,
+     "event": "push",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 67,
+   "phase": "scored",
+   "shape": "large-src-many-nowf",
+   "breakage": "code",
+   "event": "push",
+   "branch": "sandbox/67-large-src-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "docstring in src/ledger/core/money.py",
+    "comment in src/ledger/core/money.py",
+    "blank in src/ledger/core/money.py",
+    "new function code_67 in src/ledger/core/money.py",
+    "comment in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "new function code_67 in src/ledger/text/fmt.py"
+   ],
+   "defect": {
+    "file": "src/ledger/text/fmt.py",
+    "mutation": "swapped arguments, line 292",
+    "test": "tests/test_fmt.py"
+   },
+   "ci_break": null,
+   "sha": "9d6700c5f20570ead4ed8c2cbdc2d4732d7825a1",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43592335010,
+     "event": "push",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 68,
+   "phase": "scored",
+   "shape": "large-src-tests-many-wf",
+   "breakage": "ci",
+   "event": "pr",
+   "branch": "sandbox/68-large-src-tests-many-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py",
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py",
+    "tests/test_stock.py"
+   ],
+   "edits": [
+    "comment in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "blank in src/ledger/core/stock.py",
+    "rename in src/ledger/core/stock.py",
+    "new function code_68 in src/ledger/core/stock.py",
+    "comment in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "blank in src/ledger/text/fmt.py",
+    "new function code_68 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": "invalid_step",
+   "sha": "726a4ca20bf486e3e9e1ee4bf3c1ecea877848fc",
+   "pr": "https://github.com/culbec/ACISE/pull/31",
+   "runs": [
+    {
+     "id": 43592422056,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43592425848,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 69,
+   "phase": "scored",
+   "shape": "large-src-many-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/69-large-src-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "blank in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "rename in src/ledger/core/money.py",
+    "new function code_69 in src/ledger/core/money.py",
+    "blank in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "new function code_69 in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "55559dd0578bfb61c430556efe91d051e78901d7",
+   "pr": "https://github.com/culbec/ACISE/pull/32",
+   "runs": [
+    {
+     "id": 43592516728,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43592521093,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 70,
+   "phase": "scored",
+   "shape": "large-src-one-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/70-large-src-one-nowf",
+   "files": [
+    "src/ledger/core/stock.py"
+   ],
+   "edits": [
+    "rename in src/ledger/core/stock.py",
+    "comment in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "rename in src/ledger/core/stock.py",
+    "rename in src/ledger/core/stock.py",
+    "new function code_70 in src/ledger/core/stock.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "1c8ead851d91e9ad7baae9115a938c642e9be009",
+   "pr": "https://github.com/culbec/ACISE/pull/33",
+   "runs": [
+    {
+     "id": 43592608604,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43592612644,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 71,
+   "phase": "scored",
+   "shape": "large-src-tests-one-nowf",
+   "breakage": "code",
+   "event": "push",
+   "branch": "sandbox/71-large-src-tests-one-nowf",
+   "files": [
+    "src/ledger/text/fmt.py",
+    "tests/test_fmt.py"
+   ],
+   "edits": [
+    "rename in src/ledger/text/fmt.py",
+    "rename in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "comment in src/ledger/text/fmt.py",
+    "docstring in src/ledger/text/fmt.py",
+    "new function code_71 in src/ledger/text/fmt.py"
+   ],
+   "defect": {
+    "file": "src/ledger/text/fmt.py",
+    "mutation": "flipped comparison, line 51",
+    "test": "tests/test_fmt.py"
+   },
+   "ci_break": null,
+   "sha": "84dee0560ba29ec9b7181f85f3600d2d57c14290",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43592730441,
+     "event": "push",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 72,
+   "phase": "scored",
+   "shape": "small-src-many-nowf",
+   "breakage": "code",
+   "event": "pr",
+   "branch": "sandbox/72-small-src-many-nowf",
+   "files": [
+    "src/ledger/core/money.py",
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/money.py"
+   ],
+   "defect": {
+    "file": "src/ledger/text/fmt.py",
+    "mutation": "off by one (2+1), line 55",
+    "test": "tests/test_fmt.py"
+   },
+   "ci_break": null,
+   "sha": "2aee1e1c20fda02074deb5d35ffada28fae78205",
+   "pr": "https://github.com/culbec/ACISE/pull/34",
+   "runs": [
+    {
+     "id": 43592817521,
+     "event": "push",
+     "conclusion": "failure"
+    },
+    {
+     "id": 43592822748,
+     "event": "pull_request",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 73,
+   "phase": "scored",
+   "shape": "small-src-one-nowf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/73-small-src-one-nowf",
+   "files": [
+    "src/ledger/text/fmt.py"
+   ],
+   "edits": [
+    "rename in src/ledger/text/fmt.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "27f8decf7c051ffc4ee8ed2b6ba8b069a5471571",
+   "pr": "https://github.com/culbec/ACISE/pull/35",
+   "runs": [
+    {
+     "id": 43592914142,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43592918738,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 74,
+   "phase": "scored",
+   "shape": "large-src-one-wf",
+   "breakage": "none",
+   "event": "pr",
+   "branch": "sandbox/74-large-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/core/stock.py"
+   ],
+   "edits": [
+    "docstring in src/ledger/core/stock.py",
+    "rename in src/ledger/core/stock.py",
+    "docstring in src/ledger/core/stock.py",
+    "new function code_74 in src/ledger/core/stock.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "273b00377fb180c35d5096f24c265a7408298d17",
+   "pr": "https://github.com/culbec/ACISE/pull/36",
+   "runs": [
+    {
+     "id": 43592987299,
+     "event": "push",
+     "conclusion": "success"
+    },
+    {
+     "id": 43592992334,
+     "event": "pull_request",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 75,
+   "phase": "scored",
+   "shape": "small-src-one-wf",
+   "breakage": "code",
+   "event": "push",
+   "branch": "sandbox/75-small-src-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [],
+   "defect": {
+    "file": "src/ledger/text/parse.py",
+    "mutation": "dropped branch, line 11",
+    "test": "tests/test_parse.py"
+   },
+   "ci_break": null,
+   "sha": "b8f1455e577fbf7da7c43e5c18b44f7dd7ff26ef",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43593065727,
+     "event": "push",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  },
+  {
+   "n": 76,
+   "phase": "scored",
+   "shape": "large-src-one-nowf",
+   "breakage": "none",
+   "event": "push",
+   "branch": "sandbox/76-large-src-one-nowf",
+   "files": [
+    "src/ledger/text/parse.py"
+   ],
+   "edits": [
+    "comment in src/ledger/text/parse.py",
+    "rename in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "docstring in src/ledger/text/parse.py",
+    "new function code_76 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": null,
+   "sha": "440f610e9cc3f6fb6ca3acfc8fbb6e9f7537ebd6",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43593143155,
+     "event": "push",
+     "conclusion": "success"
+    }
+   ],
+   "merged": true
+  },
+  {
+   "n": 77,
+   "phase": "scored",
+   "shape": "large-src-tests-one-wf",
+   "breakage": "ci",
+   "event": "push",
+   "branch": "sandbox/77-large-src-tests-one-wf",
+   "files": [
+    ".github/workflows/sandbox.yml",
+    "src/ledger/text/parse.py",
+    "tests/test_parse.py"
+   ],
+   "edits": [
+    "comment in src/ledger/text/parse.py",
+    "blank in src/ledger/text/parse.py",
+    "comment in src/ledger/text/parse.py",
+    "new function code_77 in src/ledger/text/parse.py"
+   ],
+   "defect": null,
+   "ci_break": "invalid_step",
+   "sha": "0aa573bac67ab26df5521b60c83e01a64bf00015",
+   "pr": null,
+   "runs": [
+    {
+     "id": 43593237625,
+     "event": "push",
+     "conclusion": "failure"
+    }
+   ],
+   "merged": false
+  }
+ ]
+}
