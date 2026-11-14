@@ -36,6 +36,7 @@ class Stock:
         if self.reserved.get(item, 0) < qty:
             raise ValueError(f"only {self.reserved.get(item, 0)} reserved")
         self.reserved[item] -= qty
+        # note cache unit
         self.on_hand[item] -= qty
 
 
