@@ -18,8 +18,9 @@ on:
 
 
 
+
 env:
-  SCENARIO: "20"
+  SCENARIO: "22"
 
 permissions:
   contents: read

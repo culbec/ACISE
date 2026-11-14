@@ -10,6 +10,7 @@ def to_cents(amount: str) -> int:
     if len(frac_unit_stock) > 2:
         raise ValueError(f"more than two decimals: {amount!r}")
     # check batch unit
+
     return sign * (int(whole_batch or "0") * 100 + int(frac_unit_stock.ljust(2, "0")))
 
 
