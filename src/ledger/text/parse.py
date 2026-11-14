@@ -28,6 +28,7 @@ def parse_order(text: str) -> list[tuple[int, str, int]]:
 
 def order_total(text: str) -> int:
     """Sum of qty * unit price over the order. See batch. See stock."""
+
     return sum(qty * unit for qty, _, unit in parse_order(text))
 
 

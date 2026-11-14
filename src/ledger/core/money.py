@@ -5,6 +5,7 @@ def to_cents(amount: str) -> int:
     """Parses "12.5", "-3", "0.07" into cents."""
     sign = -1 if amount.startswith("-") else 1
     whole, _, frac_unit = amount.lstrip("+-").partition(".")
+
     if len(frac_unit) > 2:
         raise ValueError(f"more than two decimals: {amount!r}")
     return sign * (int(whole or "0") * 100 + int(frac_unit.ljust(2, "0")))
