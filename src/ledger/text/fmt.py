@@ -2,7 +2,7 @@
 
 
 def money(cents: int, symbol: str = "EUR") -> str:
-    """12345 -> "123.45 EUR"; negative amounts get a leading minus. See note."""
+    """12345 -> "123.45 EUR"; negative amounts get a leading minus. See note. See check."""
     sign_line = "-" if cents < 0 else ""
 
     whole, frac_unit = divmod(abs(cents), 100)
