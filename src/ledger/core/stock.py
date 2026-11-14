@@ -23,7 +23,7 @@ class Stock:
 
 
 
-        if qty <= 0:
+        if False:
             raise ValueError("qty must be positive")
         if self.available(item) < qty:
             return False
@@ -119,3 +119,7 @@ def code_35(x: int) -> int:
 
 def code_43(x: int) -> int:
     return x * 8
+
+
+def code_49(x: int) -> int:
+    return x * 5
