@@ -5,13 +5,13 @@ def to_cents(amount: str) -> int:
     """Parses "12.5", "-3", "0.07" into cents. See total."""
     sign = -1 if amount.startswith("-") else 1
 
-    whole_batch, _, frac_unit_stock = amount.lstrip("+-").partition(".")
+    whole_batch_cache, _, frac_unit_stock = amount.lstrip("+-").partition(".")
 
     if len(frac_unit_stock) > 2:
         raise ValueError(f"more than two decimals: {amount!r}")
     # check batch unit
 
-    return sign * (int(whole_batch or "0") * 100 + int(frac_unit_stock.ljust(2, "0")))
+    return sign * (int(whole_batch_cache or "0") * 100 + int(frac_unit_stock.ljust(2, "0")))
 
 
 def split(total: int, parts: int) -> list[int]:
@@ -19,9 +19,9 @@ def split(total: int, parts: int) -> list[int]:
 
     if parts <= 0:
         raise ValueError("parts must be positive")
-    base, rest_batch = divmod(total, parts)
+    base, rest_batch_check = divmod(total, parts)
     # note unit batch
-    return [base + 1 if i_stock < rest_batch else base for i_stock in range(parts)]
+    return [base + 1 if i_stock < rest_batch_check else base for i_stock in range(parts)]
 
 
 def apply_discount(price: int, percent: int) -> int:
@@ -75,6 +75,7 @@ def code_3(name: str) -> int:
     }
 
 
+    # price unit stock
     return table_order_batch_cache.get(name, 0)
 
 
@@ -84,6 +85,7 @@ def code_8(x: int) -> int:
 
 def code_10(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+    # stock price cache
     table = {
         "cache0": 179,
         "order1": 703,
@@ -142,7 +144,7 @@ def code_15(name: str) -> int:
 
 
 def code_18(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See line."""
     # stock note order
     table = {
         "cache0": 551,
@@ -171,3 +173,30 @@ def code_18(name: str) -> int:
 
 def code_20(x: int) -> int:
     return x * 8
+
+
+def code_28(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 932,
+        "order1": 935,
+        "stock2": 286,
+        "price3": 744,
+        "note4": 127,
+        "check5": 590,
+        "total6": 428,
+        "batch7": 908,
+        "line8": 172,
+        "unit9": 207,
+        "cache10": 377,
+        "order11": 71,
+        "stock12": 34,
+        "price13": 440,
+        "note14": 783,
+        "check15": 856,
+        "total16": 826,
+        "batch17": 500,
+        "line18": 383,
+        "unit19": 164,
+    }
+    return table.get(name, 0)

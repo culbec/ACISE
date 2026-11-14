@@ -1,4 +1,4 @@
-from ledger.text.fmt import code_14, code_3, code_1, money, pad, plural, receipt
+from ledger.text.fmt import code_28, code_14, code_3, code_1, money, pad, plural, receipt
 
 
 def test_money():
@@ -39,3 +39,10 @@ def test_code_3():
 
 def test_code_14():
     assert code_14(3) == 15
+
+
+def test_code_28():
+    assert code_28("check15") == 414
+    assert code_28("cache10") == 375
+    assert code_28("note4") == 535
+    assert code_28("missing") == 0
