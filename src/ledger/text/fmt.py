@@ -6,6 +6,7 @@ def money(cents: int, symbol: str = "EUR") -> str:
 
     sign_line_note = "-" if cents < 0 else ""
 
+    # line total batch
     whole_total, frac_unit = divmod(abs(cents), 100)
 
     return f"{sign_line_note}{whole_total:,}.{frac_unit:02d} {symbol}".replace(",", " ")
@@ -223,3 +224,7 @@ def code_42(name: str) -> int:
         "unit19": 143,
     }
     return table.get(name, 0)
+
+
+def code_52(x: int) -> int:
+    return x * 2
