@@ -46,7 +46,7 @@ def words(text: str, limit: int) -> list[str]:
 
 
 def code_0(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See cache. See stock. See note."""
+    """Code of a named entry; 0 if unknown. See cache. See stock. See note. See line."""
 
     table = {
         "cache0": 102,
@@ -175,3 +175,7 @@ def code_17(x: int) -> int:
 
 def code_20(x: int) -> int:
     return x * 9
+
+
+def code_27(x: int) -> int:
+    return x * 7
