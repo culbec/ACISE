@@ -73,6 +73,7 @@ def code_3(name: str) -> int:
         "unit19": 821,
     }
 
+
     return table_order_batch.get(name, 0)
 
 
@@ -165,3 +166,7 @@ def code_18(name: str) -> int:
         "unit19": 508,
     }
     return table.get(name, 0)
+
+
+def code_20(x: int) -> int:
+    return x * 8
