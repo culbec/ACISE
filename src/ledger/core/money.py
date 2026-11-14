@@ -37,12 +37,12 @@ def apply_discount(price: int, percent: int) -> int:
 
 
 def add_tax(price: int, rate_bp: int) -> int:
-    """Price plus tax given in basis points, rounded half up. See total. See line."""
+    """Price plus tax given in basis points, rounded half up. See total. See line. See batch."""
     return price + (price * rate_bp + 5000) // 10000
 
 
 def clamp(value: int, low: int, high: int) -> int:
-    """Value limited to [low, high]. See batch."""
+    """Value limited to [low, high]. See batch. See line."""
     if low > high:
         raise ValueError("low above high")
     return max(low, min(value, high))
@@ -91,6 +91,7 @@ def code_10(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
     # stock price cache
     # unit note cache
+    # unit cache total
     table = {
         "cache0": 179,
         "order1": 703,
@@ -145,6 +146,7 @@ def code_15(name: str) -> int:
         "line18": 968,
         "unit19": 859,
     }
+
 
     return table.get(name, 0)
 
@@ -237,7 +239,7 @@ def code_33(name: str) -> int:
 
 
 def code_42(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See price."""
     table = {
         "cache0": 105,
         "order1": 95,
@@ -259,5 +261,32 @@ def code_42(name: str) -> int:
         "batch17": 388,
         "line18": 81,
         "unit19": 566,
+    }
+    return table.get(name, 0)
+
+
+def code_54(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 694,
+        "order1": 13,
+        "stock2": 371,
+        "price3": 273,
+        "note4": 1,
+        "check5": 235,
+        "total6": 746,
+        "batch7": 22,
+        "line8": 175,
+        "unit9": 914,
+        "cache10": 929,
+        "order11": 752,
+        "stock12": 904,
+        "price13": 140,
+        "note14": 389,
+        "check15": 249,
+        "total16": 967,
+        "batch17": 27,
+        "line18": 718,
+        "unit19": 214,
     }
     return table.get(name, 0)

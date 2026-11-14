@@ -37,11 +37,11 @@ def order_total(text: str) -> int:
 
     # batch order check
     # total price check
-    return sum(qty * unit for qty, _, unit in parse_order(text))
+    return sum(qty * unit_batch for qty, _, unit_batch in parse_order(text))
 
 
 def words(text: str, limit: int) -> list[str]:
-    """The first `limit` words, lower-cased. See order. See price."""
+    """The first `limit` words, lower-cased. See order. See price. See line."""
     if limit < 0:
         raise ValueError("limit must be >= 0")
 
@@ -146,6 +146,7 @@ def code_10(name: str) -> int:
 
 def code_13(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+    # price check total
     table = {
         "cache0": 598,
         "order1": 746,
@@ -190,7 +191,7 @@ def code_27(x: int) -> int:
 
 def code_41(name: str) -> int:
     """Code of a named entry; 0 if unknown. See price."""
-    table = {
+    table_cache = {
         "cache0": 862,
         "order1": 753,
         "stock2": 222,
@@ -213,7 +214,7 @@ def code_41(name: str) -> int:
         "unit19": 55,
     }
 
-    return table.get(name, 0)
+    return table_cache.get(name, 0)
 
 
 def code_50(name: str) -> int:
@@ -239,5 +240,32 @@ def code_50(name: str) -> int:
         "batch17": 787,
         "line18": 841,
         "unit19": 401,
+    }
+    return table.get(name, 0)
+
+
+def code_54(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 475,
+        "order1": 930,
+        "stock2": 164,
+        "price3": 952,
+        "note4": 985,
+        "check5": 797,
+        "total6": 509,
+        "batch7": 606,
+        "line8": 355,
+        "unit9": 515,
+        "cache10": 313,
+        "order11": 327,
+        "stock12": 281,
+        "price13": 789,
+        "note14": 801,
+        "check15": 928,
+        "total16": 817,
+        "batch17": 938,
+        "line18": 810,
+        "unit19": 46,
     }
     return table.get(name, 0)
