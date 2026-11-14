@@ -86,7 +86,11 @@ cache.
 otherwise are dropped. A failure whose failed jobs all match a per-workflow list
 of infrastructure jobs (or that has no failed job) is dropped as well: it did not
 come from the code. Of \RunsCollected{} collected runs, \RunsKept{} are kept and
-\InfraDropped{} infrastructure failures are removed. T2 has \RowsTwo{} runs
+\InfraDropped{} infrastructure failures are removed. The per-workflow lists come
+from a label check on a 28-day sample of every candidate source. The check ranks
+the failed jobs and steps, and recurring failures that are not about the code
+(aggregate status checks, release and publishing jobs, set-up steps) go on the list. The same check over the whole
+window is part of the collection notebook. T2 has \RowsTwo{} runs
 (\FailPctTwo\,\% failed), T1 \RowsOne{} (\FailPctOne\,\% failed).
 
 \begin{table}[H]
