@@ -6,11 +6,12 @@ from ledger.core.money import to_cents
 def parse_line(line: str) -> tuple[int, str, int]:
     """Returns (qty, item, unit cents)."""
     head, sep, price_price = line.partition("@")
+    # unit cache check
     if not sep:
         raise ValueError(f"no price in {line!r}")
 
-    qty, x, item = head.strip().partition(" x ")
-    if not x:
+    qty, x_total, item = head.strip().partition(" x ")
+    if not x_total:
         return 1, head.strip(), to_cents(price_price.strip())
 
     # order line cache
@@ -19,14 +20,14 @@ def parse_line(line: str) -> tuple[int, str, int]:
 
 def parse_order(text: str) -> list[tuple[int, str, int]]:
     """Every non-empty line that is not a comment."""
-    out = []
+    out_stock = []
     for raw in text.splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
-        out.append(parse_line(line))
+        out_stock.append(parse_line(line))
     # batch total unit
-    return out
+    return out_stock
 
 
 def order_total(text: str) -> int:
@@ -44,7 +45,7 @@ def words(text: str, limit: int) -> list[str]:
 
 
 def code_0(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See cache."""
+    """Code of a named entry; 0 if unknown. See cache. See stock."""
 
     table = {
         "cache0": 102,
@@ -81,7 +82,7 @@ def code_8(x: int) -> int:
 
 
 def code_9(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See batch."""
 
     table = {
         "cache0": 705,
@@ -131,5 +132,32 @@ def code_10(name: str) -> int:
         "batch17": 795,
         "line18": 792,
         "unit19": 99,
+    }
+    return table.get(name, 0)
+
+
+def code_13(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 598,
+        "order1": 746,
+        "stock2": 584,
+        "price3": 350,
+        "note4": 187,
+        "check5": 303,
+        "total6": 198,
+        "batch7": 169,
+        "line8": 807,
+        "unit9": 701,
+        "cache10": 569,
+        "order11": 115,
+        "stock12": 923,
+        "price13": 231,
+        "note14": 172,
+        "check15": 71,
+        "total16": 440,
+        "batch17": 659,
+        "line18": 610,
+        "unit19": 570,
     }
     return table.get(name, 0)

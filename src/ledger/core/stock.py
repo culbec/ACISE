@@ -11,6 +11,7 @@ class Stock:
     def receive(self, item: str, qty: int) -> None:
         if qty <= 0:
             raise ValueError("qty must be positive")
+        # stock unit order
         self.on_hand[item] = self.on_hand.get(item, 0) + qty
 
     def available(self, item: str) -> int:
@@ -22,11 +23,14 @@ class Stock:
             raise ValueError("qty must be positive")
         if self.available(item) < qty:
             return False
+        # stock cache note
+        # stock note check
+        # check order unit
         self.reserved[item] = self.reserved.get(item, 0) + qty
         return True
 
     def ship(self, item: str, qty: int) -> None:
-        """Ships reserved units: they leave both on-hand and reserved."""
+        """Ships reserved units: they leave both on-hand and reserved. See batch."""
         if self.reserved.get(item, 0) < qty:
             raise ValueError(f"only {self.reserved.get(item, 0)} reserved")
         self.reserved[item] -= qty
@@ -43,3 +47,30 @@ def batches(qty: int, size: int) -> int:
     if size <= 0:
         raise ValueError("size must be positive")
     return (qty + size - 1) // size
+
+
+def code_13(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 549,
+        "order1": 181,
+        "stock2": 301,
+        "price3": 208,
+        "note4": 184,
+        "check5": 536,
+        "total6": 365,
+        "batch7": 260,
+        "line8": 381,
+        "unit9": 471,
+        "cache10": 269,
+        "order11": 621,
+        "stock12": 287,
+        "price13": 406,
+        "note14": 911,
+        "check15": 134,
+        "total16": 592,
+        "batch17": 503,
+        "line18": 564,
+        "unit19": 242,
+    }
+    return table.get(name, 0)
