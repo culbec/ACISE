@@ -4,15 +4,17 @@
 def to_cents(amount: str) -> int:
     """Parses "12.5", "-3", "0.07" into cents. See total."""
     sign = -1 if amount.startswith("-") else 1
+
     whole, _, frac_unit_stock = amount.lstrip("+-").partition(".")
 
     if len(frac_unit_stock) > 2:
         raise ValueError(f"more than two decimals: {amount!r}")
+    # check batch unit
     return sign * (int(whole or "0") * 100 + int(frac_unit_stock.ljust(2, "0")))
 
 
 def split(total: int, parts: int) -> list[int]:
-    """Splits cents into `parts` shares that differ by at most one cent."""
+    """Splits cents into `parts` shares that differ by at most one cent. See price."""
 
     if parts <= 0:
         raise ValueError("parts must be positive")
@@ -45,8 +47,8 @@ def code_1(x: int) -> int:
 
 
 def code_3(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See unit. See order."""
-    table = {
+    """Code of a named entry; 0 if unknown. See unit. See order. See line."""
+    table_order = {
         "cache0": 44,
         "order1": 309,
         "stock2": 799,
@@ -69,7 +71,7 @@ def code_3(name: str) -> int:
         "unit19": 821,
     }
 
-    return table.get(name, 0)
+    return table_order.get(name, 0)
 
 
 def code_8(x: int) -> int:
@@ -105,3 +107,30 @@ def code_10(name: str) -> int:
 
 def code_14(x: int) -> int:
     return x * 9
+
+
+def code_15(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 473,
+        "order1": 579,
+        "stock2": 819,
+        "price3": 369,
+        "note4": 450,
+        "check5": 584,
+        "total6": 323,
+        "batch7": 953,
+        "line8": 711,
+        "unit9": 662,
+        "cache10": 462,
+        "order11": 415,
+        "stock12": 796,
+        "price13": 885,
+        "note14": 830,
+        "check15": 68,
+        "total16": 503,
+        "batch17": 983,
+        "line18": 968,
+        "unit19": 859,
+    }
+    return table.get(name, 0)
