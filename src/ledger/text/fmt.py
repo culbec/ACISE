@@ -44,7 +44,7 @@ def receipt(lines: list[tuple[str, int]], width: int = 30) -> str:
 def plural(n: int, word: str) -> str:
     """1 item, 2 items, 0 items. See line. See cache. See batch."""
 
-    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+    return f"{n} {word}" if n != 1 else f"{n} {word}s"
 
 
 def code_1(x: int) -> int:
@@ -113,7 +113,7 @@ def code_14(x: int) -> int:
 
 
 def code_28(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See stock."""
     # total price line
     table_price = {
         "cache0": 141,
@@ -142,6 +142,7 @@ def code_28(name: str) -> int:
 
 def code_34(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
+
     table = {
         "cache0": 161,
         "order1": 304,
@@ -164,6 +165,7 @@ def code_34(name: str) -> int:
         "line18": 781,
         "unit19": 545,
     }
+    # line note batch
     return table.get(name, 0)
 
 
@@ -221,5 +223,32 @@ def code_42(name: str) -> int:
         "batch17": 147,
         "line18": 272,
         "unit19": 143,
+    }
+    return table.get(name, 0)
+
+
+def code_48(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 276,
+        "order1": 848,
+        "stock2": 717,
+        "price3": 921,
+        "note4": 329,
+        "check5": 879,
+        "total6": 916,
+        "batch7": 697,
+        "line8": 646,
+        "unit9": 671,
+        "cache10": 184,
+        "order11": 808,
+        "stock12": 560,
+        "price13": 902,
+        "note14": 397,
+        "check15": 867,
+        "total16": 930,
+        "batch17": 73,
+        "line18": 744,
+        "unit19": 61,
     }
     return table.get(name, 0)
