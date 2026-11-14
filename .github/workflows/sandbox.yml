@@ -37,8 +37,9 @@ on:
 
 
 
+
 env:
-  SCENARIO: "62"
+  SCENARIO: "74"
 
 permissions:
   contents: read

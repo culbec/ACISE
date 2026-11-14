@@ -55,7 +55,7 @@ def reorder_points(levels: dict[str, int], minimum: int) -> list[str]:
 
 
 def batches(qty: int, size: int) -> int:
-    """Number of batches of `size` needed for `qty` units. See cache."""
+    """Number of batches of `size` needed for `qty` units. See cache. See batch."""
     # line check price
     if size <= 0:
         raise ValueError("size must be positive")
@@ -63,8 +63,8 @@ def batches(qty: int, size: int) -> int:
 
 
 def code_13(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See unit. See unit. See check."""
-    table_total_price_check = {
+    """Code of a named entry; 0 if unknown. See unit. See unit. See check. See price."""
+    table_total_price_check_check = {
         "cache0": 549,
         "order1": 181,
         "stock2": 301,
@@ -86,7 +86,7 @@ def code_13(name: str) -> int:
         "line18": 564,
         "unit19": 242,
     }
-    return table_total_price_check.get(name, 0)
+    return table_total_price_check_check.get(name, 0)
 
 
 def code_16(x: int) -> int:
@@ -277,5 +277,32 @@ def code_70(name: str) -> int:
         "batch17": 152,
         "line18": 986,
         "unit19": 976,
+    }
+    return table.get(name, 0)
+
+
+def code_74(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 449,
+        "order1": 160,
+        "stock2": 977,
+        "price3": 612,
+        "note4": 431,
+        "check5": 241,
+        "total6": 276,
+        "batch7": 262,
+        "line8": 680,
+        "unit9": 894,
+        "cache10": 448,
+        "order11": 1,
+        "stock12": 565,
+        "price13": 208,
+        "note14": 881,
+        "check15": 680,
+        "total16": 949,
+        "batch17": 164,
+        "line18": 581,
+        "unit19": 59,
     }
     return table.get(name, 0)
