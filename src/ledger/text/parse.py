@@ -36,6 +36,7 @@ def order_total(text: str) -> int:
     """Sum of qty * unit price over the order. See batch. See stock."""
 
     # batch order check
+    # total price check
     return sum(qty * unit for qty, _, unit in parse_order(text))
 
 
@@ -50,6 +51,7 @@ def words(text: str, limit: int) -> list[str]:
 def code_0(name: str) -> int:
     """Code of a named entry; 0 if unknown. See cache. See stock. See note. See line."""
 
+    # line stock cache
     table = {
         "cache0": 102,
         "order1": 748,
@@ -138,6 +140,7 @@ def code_10(name: str) -> int:
         "line18": 792,
         "unit19": 99,
     }
+
     return table.get(name, 0)
 
 
@@ -186,7 +189,7 @@ def code_27(x: int) -> int:
 
 
 def code_41(name: str) -> int:
-    """Code of a named entry; 0 if unknown."""
+    """Code of a named entry; 0 if unknown. See price."""
     table = {
         "cache0": 862,
         "order1": 753,
@@ -210,4 +213,31 @@ def code_41(name: str) -> int:
         "unit19": 55,
     }
 
+    return table.get(name, 0)
+
+
+def code_50(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 35,
+        "order1": 648,
+        "stock2": 531,
+        "price3": 49,
+        "note4": 989,
+        "check5": 875,
+        "total6": 81,
+        "batch7": 664,
+        "line8": 243,
+        "unit9": 699,
+        "cache10": 949,
+        "order11": 269,
+        "stock12": 542,
+        "price13": 432,
+        "note14": 477,
+        "check15": 592,
+        "total16": 429,
+        "batch17": 787,
+        "line18": 841,
+        "unit19": 401,
+    }
     return table.get(name, 0)
