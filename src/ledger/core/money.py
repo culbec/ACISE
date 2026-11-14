@@ -178,7 +178,7 @@ def code_20(x: int) -> int:
 
 
 def code_28(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See total."""
+    """Code of a named entry; 0 if unknown. See total. See note."""
     table = {
         "cache0": 932,
         "order1": 935,

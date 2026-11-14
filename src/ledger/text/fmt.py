@@ -6,8 +6,8 @@ def money(cents: int, symbol: str = "EUR") -> str:
 
     sign_line = "-" if cents < 0 else ""
 
-    whole_total, frac_unit = divmod(abs(cents), 100)
-    return f"{sign_line}{whole_total:,}.{frac_unit:02d} {symbol}".replace(",", " ")
+    whole_total_cache, frac_unit = divmod(abs(cents), 100)
+    return f"{sign_line}{whole_total_cache:,}.{frac_unit:02d} {symbol}".replace(",", " ")
 
 
 def pad(text: str, width: int, right: bool = False) -> str:
