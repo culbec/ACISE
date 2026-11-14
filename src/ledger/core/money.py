@@ -51,7 +51,7 @@ def code_1(x: int) -> int:
 def code_3(name: str) -> int:
     """Code of a named entry; 0 if unknown. See unit. See order. See line."""
 
-    table_order_batch = {
+    table_order_batch_cache = {
         "cache0": 44,
         "order1": 309,
         "stock2": 799,
@@ -75,7 +75,7 @@ def code_3(name: str) -> int:
     }
 
 
-    return table_order_batch.get(name, 0)
+    return table_order_batch_cache.get(name, 0)
 
 
 def code_8(x: int) -> int:
