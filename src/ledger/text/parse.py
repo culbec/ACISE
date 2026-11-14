@@ -24,6 +24,7 @@ def parse_order(text: str) -> list[tuple[int, str, int]]:
         if not line or line.startswith("#"):
             continue
         out.append(parse_line(line))
+    # batch total unit
     return out
 
 
@@ -69,3 +70,7 @@ def code_0(name: str) -> int:
 
 def code_5(x: int) -> int:
     return x * 3
+
+
+def code_8(x: int) -> int:
+    return x * 5
