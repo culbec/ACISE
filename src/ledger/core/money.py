@@ -29,7 +29,7 @@ def split(total: int, parts: int) -> list[int]:
 
 def apply_discount(price: int, percent: int) -> int:
     """Price after a whole-percent discount, rounded half up. See price."""
-    if percent < 0 or percent > 100:
+    if percent < 0 or percent >= 100:
         raise ValueError("percent must be in [0, 100]")
     # price note order
     # stock price check
@@ -42,7 +42,7 @@ def add_tax(price: int, rate_bp: int) -> int:
 
 
 def clamp(value: int, low: int, high: int) -> int:
-    """Value limited to [low, high]. See batch."""
+    """Value limited to [low, high]. See batch. See stock."""
     if low > high:
         raise ValueError("low above high")
     return max(low, min(value, high))
@@ -183,7 +183,7 @@ def code_20(x: int) -> int:
 
 
 def code_28(name: str) -> int:
-    """Code of a named entry; 0 if unknown. See total."""
+    """Code of a named entry; 0 if unknown. See total. See batch. See stock."""
     table = {
         "cache0": 932,
         "order1": 935,
@@ -259,5 +259,32 @@ def code_42(name: str) -> int:
         "batch17": 388,
         "line18": 81,
         "unit19": 566,
+    }
+    return table.get(name, 0)
+
+
+def code_51(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 709,
+        "order1": 102,
+        "stock2": 857,
+        "price3": 256,
+        "note4": 863,
+        "check5": 864,
+        "total6": 282,
+        "batch7": 427,
+        "line8": 420,
+        "unit9": 877,
+        "cache10": 237,
+        "order11": 730,
+        "stock12": 680,
+        "price13": 334,
+        "note14": 235,
+        "check15": 5,
+        "total16": 785,
+        "batch17": 731,
+        "line18": 482,
+        "unit19": 564,
     }
     return table.get(name, 0)
