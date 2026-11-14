@@ -1,8 +1,8 @@
-# Project 2 — Implementation backbone
+# Project 2 - Implementation backbone
 
 Companion to [dt-ci-failure-prediction.md](dt-ci-failure-prediction.md). The main plan defines the experiment; this spec defines the code modules, their order, and their boundaries. Each module has its own spec under [modules/](modules/).
 
-Package root: `projects/2/src/acise_p2_cidt/`. Same tooling as project 1: `uv`, Python ≥ 3.14, `pytest`, Plotly with Kaleido.
+Package root: `projects/2/src/acise_p2_cidt/`. Same tooling as project 1: `uv`, Python >= 3.14, `pytest`, Plotly with Kaleido.
 Dependencies: `numpy`, `pandas`, `scipy`, `plotly`, `kaleido`, `requests`, `rich`, `jupyter`, `skops` (model persistence). `scikit-learn` is used only for the reference check in tests and for `SimpleImputer` / `TimeSeriesSplit` / `sklearn.metrics` in the ported utilities, never as the model.
 
 ## Modules and order
@@ -16,10 +16,10 @@ Dependencies: `numpy`, `pandas`, `scipy`, `plotly`, `kaleido`, `requests`, `rich
 | 4 | `data/load.py` | [data-load](modules/data-load.md) | done | Loads a built table into the project 1 `Dataset` shape: T1/T2, dev cut, drop non-features. |
 | 5 | `tree/cart.py`, `tree/prune.py` | [tree-cart](modules/tree-cart.md) | done | From-scratch CART following Breiman et al. (1984). `prune.py` holds the cost-complexity helpers (split out to keep `cart.py` under 500 lines). |
 | 6 | `tree/tune.py` | [tree-tune](modules/tree-tune.md) | done | Grid search, pruning-alpha and threshold choice on validation; `fit_predict` for `training/cv.py`. |
-| 7 | `tree/forest.py` | — | done (D3) | Random forest (Breiman, 2001) over `tree/cart.py`: bootstrap as sample weights, `max_features` columns drawn per node (`CART(max_features=, random_state=)`), soft voting, unpruned trees. Grid (depth × leaf size × class weight, 100 trees, `sqrt` columns) and threshold on validation; `fit_predict` for `run_cv`. Tests: `tests/test_forest.py`. |
+| 7 | `tree/forest.py` | - | done (D3) | Random forest (Breiman, 2001) over `tree/cart.py`: bootstrap as sample weights, `max_features` columns drawn per node (`CART(max_features=, random_state=)`), soft voting, unpruned trees. Grid (depth x leaf size x class weight, 100 trees, `sqrt` columns) and threshold on validation; `fit_predict` for `run_cv`. Tests: `tests/test_forest.py`. |
 | 8 | `validate/live.py` | [validate-live](modules/validate-live.md) | done | `train-final` (skops dump of CART or forest), `retest` on runs after `C`, `predict-run` with an explained decision path. |
 
-Order: 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Module 0 can start any time; modules 1 and 2 are independent of each other.
+Order: 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8. Module 0 can start any time; modules 1 and 2 are independent of each other.
 
 ## Notebooks
 
@@ -42,7 +42,7 @@ Taken from the project 1 modules; new code must read as if written by the same a
 **Layout and formatting**
 - `ruff format` defaults: 88 columns, double quotes, trailing commas in wrapped calls. Imports in three groups (stdlib, third-party, local) with absolute local imports (`from acise_p2_cidt.metrics.metrics import scores`).
 - Modern typing everywhere: `list[str]`, `dict[str, float]`, `X | None`, `Literal[...]`, `collections.abc.Callable`. Every public function has a typed signature.
-- Module order: imports → module constants → `logger = get_logger(__name__)` → data classes → private helpers → public functions → `main()` for CLIs.
+- Module order: imports -> module constants -> `logger = get_logger(__name__)` -> data classes -> private helpers -> public functions -> `main()` for CLIs.
 - Long modules are divided by comment banners (`# =============================`) between groups of related functions.
 - Files stay under 500 lines.
 - **Formatting and lint are required.** `uv run ruff format src tests` and `uv run ruff check src tests` must both pass with no errors before any module is handed over. Do not leave `noqa` suppressions where a small rewrite would fix the finding.

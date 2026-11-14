@@ -2,7 +2,7 @@
 
 Status: done (step 3). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_build.py`.
 
-> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §3 layout (done, phase 1: table, schema and salt keyed by slug / repository root, `--target`/`--targets` CLI), §6 events, lineages, drops, lineage-scoped history, PR change features (phase 4). Where the two differ, the multi-repo backbone wins.
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): Sec. 3 layout (done, phase 1: table, schema and salt keyed by slug / repository root, `--target`/`--targets` CLI), Sec. 6 events, lineages, drops, lineage-scoped history, PR change features (phase 4). Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 
@@ -36,7 +36,7 @@ hash_id(value: str, salt: bytes) -> str
 
 ## Design decisions
 
-- **Rows.** First-attempt `status == completed` and `conclusion ∈ {success, failure}`; other conclusions are dropped and counted in the schema. The label and the completion time come from the **first attempt** (`attempts/1` when the run was re-run).
+- **Rows.** First-attempt `status == completed` and `conclusion in {success, failure}`; other conclusions are dropped and counted in the schema. The label and the completion time come from the **first attempt** (`attempts/1` when the run was re-run).
 - **Completed-before sweep.** Rows are sorted by `(created_at, run_id)`. A min-heap holds pending runs keyed by first-attempt completion time. Before row *i* is processed, every pending run with completion `< created_at_i` is popped into the "known" history (its outcome, duration, failed jobs, files, author). Row *i*'s features read only the known history; then row *i* is pushed as pending. This one pass gives `prev_*`, streaks, all windowed rates, `concurrent_runs` (pending count at `created_at_i`), and author and file failure rates.
 - **Load windows** (`ci_load_*`) count runs **created** in the window before `created_at_i`. Creation is known at that time even if the outcome is not, so this does not leak.
 - **Windows.** Time windows use two-pointer scans over the sorted known history (`collections.deque` per window); count windows use the last *k* known runs. A window with no known runs yields NaN, not 0, so the tree can tell "no data" from "no failures" after imputation.

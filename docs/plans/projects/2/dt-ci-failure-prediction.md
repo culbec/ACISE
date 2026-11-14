@@ -1,6 +1,6 @@
-# Project 2 — From-scratch decision tree for CI failure prediction on self-collected GitHub Actions data
+# Project 2 - From-scratch decision tree for CI failure prediction on self-collected GitHub Actions data
 
-Status: **ready for implementation (2026-11-02)**. D1–D7 decided (see end).
+Status: **ready for implementation (2026-11-02)**. D1-D7 decided (see end).
 Theme: *Prediction of CI failures using ML-based algorithms.*
 Companion: [implementation-backbone.md](implementation-backbone.md).
 
@@ -46,8 +46,8 @@ Research question: *Can a from-scratch, depth-limited decision tree trained on p
 
 | Workflow | id | Trigger | Runs visible | Recent mix (last 100) |
 |---|---|---|---|---|
-| `CI: Master (Build, Test, Lint)` | 33323319 | `push` to `master` | ~1.5k in 2025, ≥2.5k in 2026 | 82 success / 16–18 failure |
-| `CI: Pull Requests (Build, Test, Lint)` | 33322401 | `pull_request`, `merge_group` | ≥2.5k per year (count capped) | 62 success / 11 failure / 9 cancelled |
+| `CI: Master (Build, Test, Lint)` | 33323319 | `push` to `master` | ~1.5k in 2025, >=2.5k in 2026 | 82 success / 16-18 failure |
+| `CI: Pull Requests (Build, Test, Lint)` | 33322401 | `pull_request`, `merge_group` | >=2.5k per year (count capped) | 62 success / 11 failure / 9 cancelled |
 
 Observations from the probe:
 
@@ -79,13 +79,13 @@ API budget (re-measured 2026-11-02: ~10.2k master runs since 2025-09, ~40% faile
 
 ### Labels and filtering
 
-- Keep `status == completed` and `conclusion ∈ {success, failure}`. Drop `cancelled`, `skipped`, `startup_failure`, `action_required`, and log the counts.
+- Keep `status == completed` and `conclusion in {success, failure}`. Drop `cancelled`, `skipped`, `startup_failure`, `action_required`, and log the counts.
 - `failed = 1` for `failure`, `0` for `success`.
 - **T1**: all runs. **T2**: runs whose previous run passed (first failures). Same targets as project 1, so the two projects can be compared.
 
 ### Features (pre-run only)
 
-Windows: **time** windows `{1,3,6,12,24}h` plus `7d`, and **count** windows `{5,10,20,50}` runs. They overlap on purpose. Selection on the dev segment (mRMR plus correlation pruning at ρ = 0.8, reused from project 1) keeps the windows that carry signal and removes the redundant ones.
+Windows: **time** windows `{1,3,6,12,24}h` plus `7d`, and **count** windows `{5,10,20,50}` runs. They overlap on purpose. Selection on the dev segment (mRMR plus correlation pruning at rho = 0.8, reused from project 1) keeps the windows that carry signal and removes the redundant ones.
 
 | Group | Source | Features |
 |---|---|---|
@@ -120,7 +120,7 @@ Windows: **time** windows `{1,3,6,12,24}h` plus `7d`, and **count** windows `{5,
 
 Reference: Breiman, Friedman, Olshen & Stone, *Classification and Regression Trees*, Wadsworth, 1984. The implementation follows the book: binary splits, Gini impurity, class priors and costs (which give the class weights), and minimal cost-complexity pruning (Ch. 3). The only change is the split search: sorting once and sweeping class counts gives the same splits as the book's search, only faster. Other code (e.g. `Valdecy/CART` on GitHub) may be consulted for how to print rules, but no code is copied from it.
 
-- Binary splits `x_j ≤ t` on numeric and ordinal features. The nominal feature `commit_type` is one-hot encoded when the table is built.
+- Binary splits `x_j <= t` on numeric and ordinal features. The nominal feature `commit_type` is one-hot encoded when the table is built.
 - Impurity: Gini (default) or entropy, as a hyperparameter.
 - Split search: per feature, sort once and sweep cumulative class counts. That is `O(n log n)` per feature per node, vectorised in NumPy.
 - Stopping: `max_depth`, `min_samples_split`, `min_samples_leaf`, `min_impurity_decrease`.
@@ -138,11 +138,11 @@ Reference: Breiman, Friedman, Olshen & Stone, *Classification and Regression Tre
 
 - Dev segment: the first ~20% of runs, used for EDA and feature selection only.
 - Expanding-window time-series CV with 5 folds after the dev segment. Each train set includes the dev rows. An inner validation tail is used for pruning, the threshold, and early hyperparameter choices.
-- Hyperparameter search: a small grid (`max_depth ∈ {3,4,5,6,8}`, `min_samples_leaf ∈ {5,10,20}`, criterion, class weight), scored on validation MCC.
+- Hyperparameter search: a small grid (`max_depth in {3,4,5,6,8}`, `min_samples_leaf in {5,10,20}`, criterion, class weight), scored on validation MCC.
 - Metrics: precision, recall, F1, MCC, accuracy, confusion matrix, plus domain metrics (`% builds saved`, `% failures caught`).
 - Baselines: Parrot (previous outcome), majority class, the sklearn tree (reference only), and the random forest if the extension is built.
-- Statistics: paired Wilcoxon over folds, Vargha–Delaney A₁₂.
-- Sensitivity check (D5): the same CV repeated without the 2026-02-10 → 2026-06-10 regime rows.
+- Statistics: paired Wilcoxon over folds, Vargha-Delaney A12.
+- Sensitivity check (D5): the same CV repeated without the 2026-02-10 -> 2026-06-10 regime rows.
 
 ### Validation on real-world examples (D4, decided)
 
@@ -150,7 +150,7 @@ Reference: Breiman, Friedman, Olshen & Stone, *Classification and Regression Tre
 2. **Freeze the model.** Train the final tree, with the hyperparameters chosen by CV, on all runs up to `C`. Save it with **skops** (`skops.io.dump`) to `results/model/cart_n8n_master.skops`, next to `schema.json` and the feature list. The tree is our own class, so loading needs `skops.io.load(path, trusted=[...])` listing our types. Keep the model a plain object (NumPy arrays and scalars) so skops can serialise it without custom hooks.
 3. **Re-test on new data before hand-off.** Collect the runs created after `C`, build their features using the stored history plus the new runs (history features may use earlier new runs, never later ones), load the saved model **unchanged**, and report the same metrics next to the CV metrics. This is the "live environment" check: the model has never seen these runs.
 4. **Live prediction CLI.** `predict-run <run_id|sha>` loads the saved model, fetches one master run, builds its features, and prints the prediction, the probability, and the decision path in plain language. It is used for case studies in the report: a few correct and a few wrong predictions, with the path explaining each one.
-5. **User feedback (light).** Show 5–10 explained predictions to 2–3 fellow students. Ask two questions: is the explanation understandable, and would they trust it to skip or prioritise a run? Record the answers for the report's "validation and user feedback" section.
+5. **User feedback (light).** Show 5-10 explained predictions to 2-3 fellow students. Ask two questions: is the explanation understandable, and would they trust it to skip or prioritise a run? Record the answers for the report's "validation and user feedback" section.
 
 ## Analysis and plots
 
@@ -178,7 +178,7 @@ Project 1 is finished and stays frozen. Its utilities are **copied into the proj
 | `stats/tests.py` | as is | none |
 | `utils/logging/log.py` | as is | logger root name |
 | `data/load.py` | rewrite | schema-driven loader; same `Dataset` dataclass and T1/T2 logic |
-| `gp/*`, `solutions/*` | not reused | — |
+| `gp/*`, `solutions/*` | not reused | - |
 
 ## Porting candidates (future work, optional)
 
@@ -209,7 +209,7 @@ Porting means re-running collection and build with new parameters (repository, w
 |---|---|
 | Master failures are mostly flaky, so the signal is weak | Report the flaky share (from reruns). Compare against Parrot honestly. A negative result with an explanation is still a valid result. |
 | Workflow definition changed over time (jobs added or renamed) | Use the workflow file's commit history to mark major changes. Add `days_since_workflow_change` if the drift plot shows breaks. |
-| Environment-caused failure regime (Feb–May 2026, Node 25.x job) inflates history-based results | D5: keep it, use T2 as the main target, repeat the CV without the regime rows. |
+| Environment-caused failure regime (Feb-May 2026, Node 25.x job) inflates history-based results | D5: keep it, use T2 as the main target, repeat the CV without the regime rows. |
 | Too few failures in T2 | Check counts after collection. Fall back to T1 as the main target if T2 has fewer than ~300 failures. |
 | API caps hide older runs | Date windows of one month or less. Log the per-window count and assert it is below 1000. |
 | History starts only in 2025-09 for this workflow id | Collection starts at the workflow's `created_at`; ~10k runs are enough for a tree. |
@@ -221,6 +221,6 @@ Porting means re-running collection and build with new parameters (repository, w
 - **D2 (decided).** Copy the project 1 utilities into `projects/2` and generalise them there. Keep both copies separate until a shared library is decided on.
 - **D3 (decided, 2026-11-03).** Random forest extension built (`tree/forest.py`): the single tree is weak on T2 (CV MCC 0.063) and does not beat Parrot on T1, so the forest is the stronger comparison point. It is evaluated in `tree.ipynb` with the same folds, features and validation protocol as CART. CART stays the explainable model; the forest answers how much accuracy the explanation costs.
 - **D4 (decided).** Develop on all data available at collection date `C`. Save the final model with skops. Before hand-off, re-test the saved model on runs created after `C`. Porting to another repository is optional future work.
-- **D5 (decided, 2026-11-02).** Keep the failure regime of 2026-02-10 → 2026-06-10 in the data. In that period a Node 25.x unit-test job failed on most runs, so the regime holds 54% of all failures (58% failure rate vs. 16% outside). The cause is the CI environment, not the pushed change. The regime is real CI behaviour, so it stays. Two consequences follow: T2 is the main target, because it is less affected (42% vs. 12% failure rate); and the tree notebook repeats the CV without the regime rows as a sensitivity check, with the same code and hyperparameter grid. Dropping the regime (cleaner signal, but it redefines the data) and ignoring Node-version jobs in the label (breaks the portability rule) were rejected.
+- **D5 (decided, 2026-11-02).** Keep the failure regime of 2026-02-10 -> 2026-06-10 in the data. In that period a Node 25.x unit-test job failed on most runs, so the regime holds 54% of all failures (58% failure rate vs. 16% outside). The cause is the CI environment, not the pushed change. The regime is real CI behaviour, so it stays. Two consequences follow: T2 is the main target, because it is less affected (42% vs. 12% failure rate); and the tree notebook repeats the CV without the regime rows as a sensitivity check, with the same code and hyperparameter grid. Dropping the regime (cleaner signal, but it redefines the data) and ignoring Node-version jobs in the label (breaks the portability rule) were rejected.
 - **D6 (decided, 2026-11-03).** Feature selection inputs, from the EDA. (a) `merge_to_ci_delay` is excluded: it jumps from ~4 s to ~1,100 s on 2026-01-18 (a change in how n8n merges), right after the T2 dev segment ends, so any threshold would split time periods, not changes. (b) `flaky_rate_24h` and `flaky_rate_7d` are excluded: re-runs happened mostly early (118 of 149 non-zero T2 values are in the dev segment, from ~9 flaky runs), so they look relevant on the dev rows and are ~0 afterwards. Both exclusions go through `select_features(exclude=...)` and are recorded in the selection meta. (c) `clean()` checks near-constant columns on percentile ranks instead of min-max values, so heavy-tailed counts (`deletions`, `commits_since_*`) are no longer dropped by one outlier. (d) `author_is_bot` stays dropped as a rare binary on the dev rows (0.5%), although it reaches 10% later; forcing it in would use later rows for a choice. (e) The rare-flag rule in `clean()` (minority value < 1% of dev rows) applies to every two-valued column, not only 0/1: `n_parents` is 2 only for the weekly release-tag merges (13 of 1,525 T2 dev runs) and is dropped like any rare flag.
 - **D7 (decided, 2026-11-03).** As in project 1, a frozen T2 feature that drops out of the top 20 in 3 or more of the 5 CV fold trains (`analysis.features.drift`) is removed from the list. This uses labels after the dev segment to shrink the list; it can never add a feature. The report states this next to the CV results. T1 is not drift-filtered.

@@ -2,7 +2,7 @@
 
 Status: done (step 8). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_live.py`.
 
-> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §3.2 (done, phase 1: `train_final(dataset)`, `model_path(dataset, ...)`, `--dataset` and `--model` required), §9.1 multi-target sidecar, `retest` per source, `predict_run(slug)`, `--record` (phase 8). Where the two differ, the multi-repo backbone wins.
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): Sec. 3.2 (done, phase 1: `train_final(dataset)`, `model_path(dataset, ...)`, `--dataset` and `--model` required), Sec. 9.1 multi-target sidecar, `retest` per source, `predict_run(slug)`, `--record` (phase 8). Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 

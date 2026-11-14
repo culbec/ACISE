@@ -2,7 +2,7 @@
 
 Status: done (step 1). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_collect.py`.
 
-> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §2 registry, §3 identity and layout (done, phase 1: `Target.branch` optional, `slug`, `repo_root`, cache at `data/raw/<owner>__<name>/<slug>/`, manifest by slug, no `N8N_MASTER`, `--target`/`--targets` CLI), §4 collector (phase 2). Where the two differ, the multi-repo backbone wins.
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): Sec. 2 registry, Sec. 3 identity and layout (done, phase 1: `Target.branch` optional, `slug`, `repo_root`, cache at `data/raw/<owner>__<name>/<slug>/`, manifest by slug, no `N8N_MASTER`, `--target`/`--targets` CLI), Sec. 4 collector (phase 2). Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 
@@ -48,7 +48,7 @@ A file that exists is never fetched again. Writes go to `*.tmp` and are renamed,
 
 ## Design decisions
 
-- **Date windows.** Calendar months. A one-result probe reads `total_count`; at ≥ 1000 the window is halved (recursively) and a `.split` marker is written, so a resumed collection re-enters the halves without probing again.
+- **Date windows.** Calendar months. A one-result probe reads `total_count`; at >= 1000 the window is halved (recursively) and a `.split` marker is written, so a resumed collection re-enters the halves without probing again.
 - **Processing per window.** As soon as a window is on disk, its re-run runs get `attempts/1` and its failed first attempts get their jobs. Details follow the runs, with no separate pass over the cache.
 - **Default range.** `since` defaults to the workflow's `created_at` (one call to `/actions/workflows/{id}`); `until` defaults to today (UTC). `--since C` is how `retest` gets new runs.
 - **Rate limits.** `X-RateLimit-Remaining: 0` sleeps until `X-RateLimit-Reset`. 5xx and secondary limits (403/429) are retried with exponential backoff (max 5 tries, honouring `Retry-After`). Any other error raises.

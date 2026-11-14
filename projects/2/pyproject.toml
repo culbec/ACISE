@@ -29,6 +29,7 @@ train-final = "acise_p2_cidt.validate.live:train_final_main"
 retest = "acise_p2_cidt.validate.live:retest_main"
 predict-run = "acise_p2_cidt.validate.live:predict_run_main"
 label-check = "acise_p2_cidt.analysis.labels:main"
+sandbox-report = "acise_p2_cidt.validate.sandbox:main"
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]

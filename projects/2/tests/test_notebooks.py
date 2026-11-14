@@ -17,15 +17,15 @@ from nb_harness import check_display, run_notebook
 
 from acise_p2_cidt.analysis import features
 from acise_p2_cidt.collect import http
-from acise_p2_cidt.collect.targets import slug
+from acise_p2_cidt.collect.targets import Target, TargetConfig, slug
 from acise_p2_cidt.data.load import pool_name
 from acise_p2_cidt.metrics.metrics import domain, scores
 from acise_p2_cidt.tree import forest, tune
-from acise_p2_cidt.validate import live
+from acise_p2_cidt.validate import live, sandbox, scenarios
 
 NB = pathlib.Path(__file__).resolve().parents[1] / "notebook"
 # last cell edited for multi-repo, per notebook
-UNTIL = {"collection.ipynb": None, "validation.ipynb": 14}
+UNTIL = {"collection.ipynb": None, "validation.ipynb": None}
 
 
 def test_display_rule():
@@ -219,8 +219,32 @@ def fake_predict_run(path: pathlib.Path, ref: str, source: str) -> dict:
             "path": ["leaf: P(fail) = 0.40"]}  # fmt: skip
 
 
+def write_sandbox(d: pathlib.Path) -> dict:
+    """A finished sandbox plan, one recorded prediction per scored change, and
+    a stand-in for each run's first attempt (every third one failed)."""
+    plan = scenarios.plan(0, warmup=2, scored=32)
+    scenarios.save_plan(d / "scenarios.json", 0, plan)
+    st = json.loads((d / "scenarios.json").read_text())
+    outcome = {}
+    for i, (sc, e) in enumerate(zip(plan, st["scenarios"])):
+        failed = sc.breakage != "none"
+        e |= {"sha": f"{i:040d}", "merged": not failed,
+              "runs": [{"id": 900 + i, "event": "push",
+                        "conclusion": "failure" if failed else "success"}]}  # fmt: skip
+        outcome[900 + i] = e["runs"][0]["conclusion"]
+        if sc.phase == "scored":
+            sandbox.record(d / "predictions.jsonl", {
+                "repo": "culbec/ACISE", "run_id": 900 + i, "event": "push",
+                "p_fail": 0.8 if i % 3 else 0.2, "predicted": bool(i % 3),
+                "prev_failed": None, "majority": False, "imputed": ["fail_streak"],
+                "model": "cart_pool_T2.skops", "predicted_at": "2026-11-20T10:00:00+00:00",
+                "scenario": sc.to_dict()})  # fmt: skip
+    (d / "scenarios.json").write_text(json.dumps(st))
+    return outcome
+
+
 @pytest.mark.notebook
-def test_validation(built, monkeypatch):
+def test_validation(built, monkeypatch, tmp_path):
     small_grids(monkeypatch)
     write_feature_lists({(t, pool_name(built)) for t in ("T1", "T2")})
     for t in mock_pool.TARGETS:
@@ -243,10 +267,22 @@ def test_validation(built, monkeypatch):
         calls.append((url, params))
         return {"workflow_runs": [{"id": 5}] if "/workflows/12/" in url else []}
 
+    monkeypatch.setattr(sandbox, "SANDBOX_DIR", tmp_path / "sandbox")
+    outcome = write_sandbox(sandbox.SANDBOX_DIR)
+
+    def attempt(repo, rid):
+        return {"status": "completed", "conclusion": outcome[rid],
+                "updated_at": "2026-11-20T10:03:00Z"}  # fmt: skip
+
+    sbx = TargetConfig(Target("culbec/ACISE", 9, None), False, (), "ci-sandbox")
     ns = run_notebook(
         NB / "validation.ipynb",
         {"retest": fake_retest, "predict_run": fake_predict_run,
-         "http": SimpleNamespace(get=get)},
+         "http": SimpleNamespace(get=get),
+         "sandbox_report": lambda p: sandbox.report(p, attempt),
+         "sandbox_refresh": lambda cfg, since: None, "sandbox_target": lambda: sbx,
+         "label_summary": lambda cfg: {"n_runs": 34, "failure_rate": 0.4,
+                                       "top_jobs": pd.DataFrame({"job": ["test"]})}},
         until=UNTIL["validation.ipynb"],
     )  # fmt: skip
     assert ns["DATASET"] == pool_name(built) and len(ns["paths"]) == 4
@@ -260,6 +296,9 @@ def test_validation(built, monkeypatch):
     # the all-branch source is asked without a branch or event filter
     assert calls[0][1] == {"status": "in_progress", "per_page": 1}
     assert calls[1][1]["branch"] == "main"
+    assert ns["rep"]["scores"].loc["cart", "n_test"] == 32
+    assert ns["rep"]["dropped"] == {}
+    assert set(ns["scored"]["breakage"]) >= {"none", "code"}
 
 
 def test_no_single_repo_names():

@@ -318,8 +318,7 @@ def retest(paths: pathlib.Path | list[pathlib.Path]) -> pd.DataFrame:
     once, then every model is scored on them. Parrot and majority are scored on the
     same rows as each model. As in `run_cv`, the scores are given pooled
     (`source = "all"`) and per source; a source without new runs has no row.
-    Writes `<model>_retest.csv` (metrics) and `<model>_t
-    etest_runs.csv` (one row
+    Writes `<model>_retest.csv` (metrics) and `<model>_retest_runs.csv` (one row
     per run, for picking case studies) next to each model.
 
     Args:

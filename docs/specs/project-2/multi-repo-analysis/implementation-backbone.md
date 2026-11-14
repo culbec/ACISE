@@ -1,4 +1,4 @@
-# Multiple Repository Analysis — Implementation backbone
+# Multiple Repository Analysis - Implementation backbone
 
 Code-level companion to [plan.md](plan.md), which implements [SPEC.md](SPEC.md). Package root: `projects/2/src/acise_p2_cidt/`. The [project backbone](../../../plans/projects/2/implementation-backbone.md) still governs coding style, tests, leakage boundary, secrets, and "one module at a time, on request". Each section below is one unit of work. It names the files it touches, its API, and its tests.
 
@@ -6,18 +6,18 @@ Code-level companion to [plan.md](plan.md), which implements [SPEC.md](SPEC.md).
 
 | # | Section | Files | Plan phase |
 |---|---|---|---|
-| 1 | §2 Registry | `collect/targets.py` (new), `config/targets.json` (new) | 1 |
-| 2 | §3 Identity and layout | `collect/gh_runs.py`, `data/load.py`, `data/build.py`, `analysis/features.py`, `validate/live.py` | 1 |
-| 3 | §4 Collector | `collect/gh_runs.py` | 2 |
-| 4 | §5 Git | `collect/git_changes.py` | 2 |
-| 5 | §8 Label check | `analysis/labels.py` (new) | 3 |
-| 6 | §6 Build | `data/build.py`, `data/history.py` | 4 |
-| 7 | §7 Pooled load and CV | `data/load.py`, `training/cv.py` | 6 |
-| 8 | §9 Live and sandbox | `validate/live.py`, `validate/sandbox.py` (new) | 8, 9 |
-| 9 | §11 Mock data, notebook harness, notebooks | `tests/mock_pool.py`, `tests/nb_harness.py`, `tests/test_notebooks.py` (new), `notebook/*.ipynb` | plan §5 |
+| 1 | Sec. 2 Registry | `collect/targets.py` (new), `config/targets.json` (new) | 1 |
+| 2 | Sec. 3 Identity and layout | `collect/gh_runs.py`, `data/load.py`, `data/build.py`, `analysis/features.py`, `validate/live.py` | 1 |
+| 3 | Sec. 4 Collector | `collect/gh_runs.py` | 2 |
+| 4 | Sec. 5 Git | `collect/git_changes.py` | 2 |
+| 5 | Sec. 8 Label check | `analysis/labels.py` (new) | 3 |
+| 6 | Sec. 6 Build | `data/build.py`, `data/history.py` | 4 |
+| 7 | Sec. 7 Pooled load and CV | `data/load.py`, `training/cv.py` | 6 |
+| 8 | Sec. 9 Live and sandbox | `validate/live.py`, `validate/sandbox.py` (new) | 8, 9 |
+| 9 | Sec. 11 Mock data, notebook harness, notebooks | `tests/mock_pool.py`, `tests/nb_harness.py`, `tests/test_notebooks.py` (new), `notebook/*.ipynb` | plan Sec. 5 |
 | 10 | Sec. 12 ASCII cleanup | every file in the scope of Sec. 12, `tests/test_ascii.py` (new) | 10 |
 
-Order: 1 → 2 → (3, 4) → 5 → 6 → 7 → 8, then 10 once the project is complete. New and edited text in every unit is ASCII-only (plan, ASCII rule); unit 10 cleans what was written before. `tests/mock_pool.py` is written with unit 1 and extended by each later unit, because every unit tests on it. The notebooks are edited in steps N1–N6, each right after the unit it calls (plan §5.2); `tests/nb_harness.py` and `tests/test_notebooks.py` come with N1, after unit 4. Sections 3 and 4 are independent. Every file stays under 500 lines. `build.py` and `history.py` are near 300 lines, so the lineage helpers go to a new `data/lineage.py` if either file would pass 450.
+Order: 1 -> 2 -> (3, 4) -> 5 -> 6 -> 7 -> 8, then 10 once the project is complete. New and edited text in every unit is ASCII-only (plan, ASCII rule); unit 10 cleans what was written before. `tests/mock_pool.py` is written with unit 1 and extended by each later unit, because every unit tests on it. The notebooks are edited in steps N1-N6, each right after the unit it calls (plan Sec. 5.2); `tests/nb_harness.py` and `tests/test_notebooks.py` come with N1, after unit 4. Sections 3 and 4 are independent. Every file stays under 500 lines. `build.py` and `history.py` are near 300 lines, so the lineage helpers go to a new `data/lineage.py` if either file would pass 450.
 
 New CLIs, registered in `pyproject.toml` `[project.scripts]`: `label-check = "acise_p2_cidt.analysis.labels:main"`, `sandbox-report = "acise_p2_cidt.validate.sandbox:main"`.
 
@@ -33,7 +33,7 @@ New CLIs, registered in `pyproject.toml` `[project.scripts]`: `label-check = "ac
 ]
 ```
 
-The initial file holds every candidate of SPEC §9, plus n8n `ci-master` (P-D3). The workflow ids are in plan §1.
+The initial file holds every candidate of SPEC Sec. 9, plus n8n `ci-master` (P-D3). The workflow ids are in plan Sec. 1.
 
 ```python
 # projects/2/src/acise_p2_cidt/collect/targets.py -> projects/2/config/targets.json
@@ -56,7 +56,7 @@ Validation, done once in `load_targets`. Each failure raises `ValueError` naming
 - Required keys: `repo`, `workflow_id`, `enabled`. Optional: `branch` (default `null`), `exclude_jobs` (default `[]`). Unknown keys are rejected, which catches typos such as `enable`.
 - `repo` matches `^[\w.-]+/[\w.-]+$`. `workflow_id` is an `int > 0` and not a `bool`. `branch` is `null` or a non-empty string. `enabled` is a `bool`.
 - Every `exclude_jobs` item is a string that compiles with `re.compile`.
-- No two entries share a slug (§3).
+- No two entries share a slug (Sec. 3).
 
 ## 3. Identity and layout
 
@@ -111,7 +111,7 @@ EVENTS: frozenset[str] = frozenset({"push", "pull_request", "merge_group"})  # c
 - Top level: calendar months. File names are `YYYY-MM-DD_YYYY-MM-DD.json`.
 - Halving works on `datetime` (UTC) bounds. A window of whole days halves on day boundaries while it spans more than one day. A one-day window halves into hour-aligned datetime windows.
 - Sub-day files are named `YYYY-MM-DDTHH-MM-SS_YYYY-MM-DDTHH-MM-SS.json`. The query uses `created=YYYY-MM-DDTHH:MM:SSZ..YYYY-MM-DDTHH:MM:SSZ` (both ends inclusive, so the halves are `[a, mid]` and `[mid + 1 s, b]`).
-- The `RuntimeError` is raised only when a **one-hour** window holds ≥ `MAX_WINDOW_RUNS`.
+- The `RuntimeError` is raised only when a **one-hour** window holds >= `MAX_WINDOW_RUNS`.
 - `MIN_WINDOW: timedelta = timedelta(hours=1)  # openclaw peaks near 2,000 runs a day; an hour stays far below the 1,000 cap`.
 - The re-fetch rule (a file saved before its window ended is fetched again) compares datetimes, not dates.
 
@@ -125,7 +125,7 @@ EVENTS: frozenset[str] = frozenset({"push", "pull_request", "merge_group"})  # c
 - `merge_base(repo_dir, a, b) -> str | None`: `git merge-base a b`, memoised. None when a SHA is missing.
 - `commit_log(repo_dir, branch)` is unchanged and walks the **default** branch for targets without a branch.
 - `fetch_heads(repo_dir, shas) -> int`: the SHAs missing from the clone (`git cat-file --batch-check`) are fetched by SHA in batches of 200, each into `refs/ci/<sha>` so `gc` never prunes them. Returns the count still missing. Called by `build` before `git_features`, with every head and `base_sha`.
-- Without it, only each branch's and PR's current tip is in the clone: heads replaced by a later push, deleted branches and merge-queue heads are missing (24–50% on PR-heavy targets). GitHub serves them by SHA. Heads still missing after the fetch give NaN git features and are counted (existing `missing` warning).
+- Without it, only each branch's and PR's current tip is in the clone: heads replaced by a later push, deleted branches and merge-queue heads are missing (24-50% on PR-heavy targets). GitHub serves them by SHA. Heads still missing after the fetch give NaN git features and are counted (existing `missing` warning).
 
 ## 6. Build (`data/build.py`, `data/history.py`)
 
@@ -204,7 +204,7 @@ main()  # CLI `label-check --target <slug> | --targets <path> [--all]`
 
 - It reads the raw cache only (`cached_runs`, `first_attempt`, `jobs/`), with no API calls.
 - The ranking lists only jobs not yet excluded, so the re-run after `exclude_jobs` shows what is left. A trailing ` [<uuid>]` (servo) is stripped from job names before grouping.
-- T2 failures come from the lineage rule of §6.1/§6.3 without git: group the supported-event runs by lineage, order by completion, and count failures whose lineage-previous run passed or does not exist.
+- T2 failures come from the lineage rule of Sec. 6.1/Sec. 6.3 without git: group the supported-event runs by lineage, order by completion, and count failures whose lineage-previous run passed or does not exist.
 - The CLI prints the top-jobs table and the summary with the rich console. `--all` includes disabled targets (needed in phase 3, when all are disabled).
 
 ## 9. Live and sandbox
@@ -233,14 +233,14 @@ All tests run offline. API data comes from recorded JSON fixtures, git from tiny
 
 | File | Cases |
 |---|---|
-| `test_targets.py` (new) | valid file; each validation error of §2 (missing key, unknown key, bad repo, `workflow_id` bool/0/str, empty branch, bad regex, duplicate slug); `enabled_only`; `find_target` of a disabled target |
+| `test_targets.py` (new) | valid file; each validation error of Sec. 2 (missing key, unknown key, bad repo, `workflow_id` bool/0/str, empty branch, bad regex, duplicate slug); `enabled_only`; `find_target` of a disabled target |
 | `test_collect.py` | `slug` with and without a branch, `/` in a branch; no `branch`/`event` params for an all-branch target; a day with 2,400 runs splits into hour windows and only leaves are written; resume makes zero calls; an hour above the cap raises; unsupported events get no details |
 | `test_git_changes.py` | `clone` without a branch fetches `refs/pull/*/head` (local bare "remote" in `tmp_path`); `merge_base` of a branch; `merge_base` with a missing SHA is None; `fetch_heads` fetches an unreferenced commit of the remote into `refs/ci/` and skips present SHAs |
 | `test_history.py` (new) | two interleaved lineages: `prev_failed` and `fail_streak` follow their own lineage; the first run of a lineage gets NaN and `lineage_first_run = 1`; a lineage run completed after the current run's creation is not "previous"; `sha_prior_failed` reads only completed runs; no `lineage` column means the same output as today (golden frame) |
 | `test_build.py` | `lineage()` for push, PR, fork PR (empty `pull_requests`), merge queue; all-excluded failure dropped as `infra_failure`; mixed failure kept; unsupported event dropped as `event_schedule`; event one-hot and `from_fork` columns |
 | `test_load.py` | two toy tables interleave by `created_at`; `source` set; mismatched `feature_cols` raise; `until`, T2 (P-D4: NaN kept) and the dev cut act after pooling; one slug behaves as before |
 | `test_cv.py` | per-source rows sum to the pooled row's `n_test` and `n_fail`; single source gives `source = "all"` only |
-| `test_labels.py` (new) | top-job coverage stops at ≥ 80%; infra share after `exclude_jobs`; T2 failure count on a toy lineage set |
+| `test_labels.py` (new) | top-job coverage stops at >= 80%; infra share after `exclude_jobs`; T2 failure count on a toy lineage set |
 | `test_live.py` | multi-target sidecar round-trip; `predict_run` without `slug` on a multi-target model raises; `--record` writes one JSON line |
 | `test_sandbox.py` (new) | a row predicted after completion is dropped and counted; per-scenario table counts |
 
@@ -268,7 +268,7 @@ mock_pool(tmp, monkeypatch) -> list[str]
 ```
 
 - `write_table` takes the feature names from one source of truth: a frozen copy of the real `schema["feature_cols"]` in `tests/fixtures/feature_cols.json`, refreshed whenever phase 4 changes the features. Notebooks then see real column names.
-- The tables are sized so the pooled data has ≥ 5 folds × `MIN_TEST_FAILURES` failures. Per source it can be fewer, which exercises the "fewer than the minimum" paths.
+- The tables are sized so the pooled data has >= 5 folds x `MIN_TEST_FAILURES` failures. Per source it can be fewer, which exercises the "fewer than the minimum" paths.
 
 ### 11.2 `tests/nb_harness.py`
 
@@ -293,7 +293,7 @@ run_notebook(path: pathlib.Path, stubs: dict[str, Callable], skip_tags=("live",)
 
 ### 11.4 Editing notebooks
 
-- Cells are developed as plain code, run through `run_notebook` on a scratch copy, then written to the real notebook with `nbformat` (or the NotebookEdit tool), keeping the cell order of plan §5.3.
+- Cells are developed as plain code, run through `run_notebook` on a scratch copy, then written to the real notebook with `nbformat` (or the NotebookEdit tool), keeping the cell order of plan Sec. 5.3.
 - Edited code cells are saved with `outputs = []` and `execution_count = None`. Unchanged cells keep their outputs until the user re-runs.
 - Every cell keeps the notebook's style: imports in the setup cell, display through `display(...)`, figures through `plots.save(fig, "<notebook>_<name>")`, comments only for decisions.
 - Titles and captions name the data and the view, not the code: "Monthly failure rate per source (T1, all runs)", not "df2". Per-source variants of a pooled view repeat the pooled title with the source slug.

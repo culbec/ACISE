@@ -294,7 +294,7 @@ def build(
     repo_dir = repo_root(t.repo) / "repo.git"
     if not repo_dir.exists():
         repo_dir = git.clone(t.repo, t.branch)
-    default = git.default_branch(repo_dir)
+    default = cfg.mainline or git.default_branch(repo_dir)
     log_df = git.commit_log(repo_dir, t.branch or default)
     log_df["author_id"] = [hash_id(e, salt) for e in log_df.pop("author_email")]
     runs["is_default_branch"] = (

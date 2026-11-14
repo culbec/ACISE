@@ -1,0 +1,12 @@
+assets/
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.xdv
+*.bbl
+*.bcf
+*.blg
+*.run.xml

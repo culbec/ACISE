@@ -2,7 +2,7 @@
 
 Status: done (2026-11-02). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: copied with each module and adapted (`test_metrics.py`, `test_stats.py`, `test_features.py`, `test_cv.py`).
 
-> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): `analysis/features.py` files keyed by `dataset` instead of `owner__name` (§3.2, done, phase 1); `training/cv.py` per-source rows and `meta["dataset"]` check (§7, phase 6). The other ports are unchanged. Where the two differ, the multi-repo backbone wins.
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): `analysis/features.py` files keyed by `dataset` instead of `owner__name` (Sec. 3.2, done, phase 1); `training/cv.py` per-source rows and `meta["dataset"]` check (Sec. 7, phase 6). The other ports are unchanged. Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Bring the finished, tested project 1 utilities into `acise_p2_cidt` (D2: copies,
 
 ## Why few changes are needed
 
-`data/build.py` always writes the **same column names** whatever the repository (`created_at`, `failed`, `prev_failed`, …). So the column names in the ports can stay module constants: the repository-specific part is the build step, not these modules. `schema.json` carries what changes per repository (provenance, nominal and dropped columns), and `data/load.py` copies it into `ds.meta`.
+`data/build.py` always writes the **same column names** whatever the repository (`created_at`, `failed`, `prev_failed`, ...). So the column names in the ports can stay module constants: the repository-specific part is the build step, not these modules. `schema.json` carries what changes per repository (provenance, nominal and dropped columns), and `data/load.py` copies it into `ds.meta`.
 
 ## Per-module changes
 

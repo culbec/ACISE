@@ -32,6 +32,9 @@ def test_defaults(tmp_path):
     (c,) = load_targets(registry(tmp_path, [{"repo": "o/r", "workflow_id": 1,
                                              "enabled": True}]))  # fmt: skip
     assert c.target == Target("o/r", 1, None) and c.exclude_jobs == ()
+    assert c.mainline is None
+    (c,) = load_targets(registry(tmp_path, [OK | {"mainline": "ci-sandbox"}]))
+    assert c.mainline == "ci-sandbox"
 
 
 @pytest.mark.parametrize(
@@ -45,6 +48,7 @@ def test_defaults(tmp_path):
         ({"workflow_id": 0}, "workflow_id"),
         ({"workflow_id": "1"}, "workflow_id"),
         ({"branch": ""}, "branch"),
+        ({"mainline": ""}, "mainline"),
         ({"enabled": "yes"}, "enabled"),
         ({"exclude_jobs": ["(unclosed"]}, "bad exclude_jobs regex"),
         ({"exclude_jobs": "^Result$"}, "list of strings"),

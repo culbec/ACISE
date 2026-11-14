@@ -10,7 +10,7 @@ REGISTRY = pathlib.Path(__file__).resolve().parents[3] / "config" / "targets.jso
 
 _REPO = re.compile(r"^[\w.-]+/[\w.-]+$")
 _REQUIRED: frozenset[str] = frozenset({"repo", "workflow_id", "enabled"})
-_KEYS: frozenset[str] = _REQUIRED | {"branch", "exclude_jobs"}
+_KEYS: frozenset[str] = _REQUIRED | {"branch", "exclude_jobs", "mainline"}
 
 
 class Target(NamedTuple):
@@ -41,6 +41,9 @@ class TargetConfig:
     # regexes on "<job>" or "<job> :: <failed step>"; a failed run whose failed
     # jobs all match is infra
     exclude_jobs: tuple[str, ...]
+    # branch whose first-parent line the build walks for git features; None = the
+    # remote's default branch (an orphan branch shares no history with it)
+    mainline: str | None = None
 
     def excludes(self, job: str | None, step: str | None) -> bool:
         """
@@ -73,6 +76,9 @@ def _parse(i: int, e: object) -> TargetConfig:
         raise ValueError(f"{where}: workflow_id must be an int > 0, got {wid!r}")
     if branch is not None and (not isinstance(branch, str) or not branch):
         raise ValueError(f"{where}: branch must be null or a non-empty string")
+    mainline = e.get("mainline")
+    if mainline is not None and (not isinstance(mainline, str) or not mainline):
+        raise ValueError(f"{where}: mainline must be null or a non-empty string")
     if not isinstance(e["enabled"], bool):
         raise ValueError(f"{where}: enabled must be true or false")  # noqa: TRY004
 
@@ -86,7 +92,7 @@ def _parse(i: int, e: object) -> TargetConfig:
         except re.error as err:
             raise ValueError(f"{where}: bad exclude_jobs regex {j!r}: {err}") from None
 
-    return TargetConfig(Target(repo, wid, branch), e["enabled"], tuple(jobs))
+    return TargetConfig(Target(repo, wid, branch), e["enabled"], tuple(jobs), mainline)
 
 
 def load_targets(

@@ -2,7 +2,7 @@
 
 Status: done (step 2). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_git_changes.py`.
 
-> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §3.2 clone location `repo_root(repo)` (done, phase 1), §5 all-branch clone, `default_branch`, `merge_base` (phase 2). Where the two differ, the multi-repo backbone wins.
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): Sec. 3.2 clone location `repo_root(repo)` (done, phase 1), Sec. 5 all-branch clone, `default_branch`, `merge_base` (phase 2). Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 
@@ -27,7 +27,7 @@ tags(repo_dir) -> pd.DataFrame                           # tag, sha, commit_time
 
 - **Full single-branch clone** (`git clone --single-branch --branch <branch>`). `--numstat` needs file contents; a blobless clone would fetch them one by one, thousands of times. The size is logged after cloning.
 - **One `git log` pass, not one call per run.** `git log --numstat --format=%x00%H%x00%P%x00%ae%x00%at%x00%ct%x00%s <branch>` is parsed once into `commit_log`. File history features (age, prior changes, distinct authors, time since last change) are then computed in memory by `data/build.py`. Per-file `git log` calls would cost one process per file per run.
-- **Diffs between runs** (`diff_numstat`, `rev_count`) are per-run calls, because they depend on which earlier run is the reference. About 2 calls × ~4k runs, each a few ms. Results are memoised on `(a, b)`.
+- **Diffs between runs** (`diff_numstat`, `rev_count`) are per-run calls, because they depend on which earlier run is the reference. About 2 calls x ~4k runs, each a few ms. Results are memoised on `(a, b)`.
 - **Missing SHA.** A run's `head_sha` may be gone from the branch (force-push). `diff_numstat` / `rev_count` return `None`, and the build marks those features NaN; the count is logged.
 - **Renames** (`old => new` in numstat) count under the new path.
 - **`classify` rules**, checked in this order, on the lower-cased path:

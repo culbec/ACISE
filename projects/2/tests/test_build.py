@@ -324,3 +324,28 @@ def test_pr_change_is_the_whole_branch(raw):
     assert schema["target_slug"] == slug(T) and schema["events"] == sorted(
         gh_runs.EVENTS
     )
+
+
+def test_mainline_walks_an_orphan_branch(raw):
+    repo = gh_runs.repo_root(T.repo) / "repo.git"
+    _git(repo, "checkout", "-q", "--orphan", "sbx")
+    _git(repo, "read-tree", "--empty")
+    shas = []
+    for i in range(2):
+        (repo / "pkg.py").write_text("x = 1\n" * (i + 2))
+        _git(repo, "add", "-A")
+        _git(repo, "commit", "-q", "-m", f"s{i}")
+        shas.append(_git(repo, "rev-parse", "HEAD"))
+    _git(repo, "checkout", "-q", "main")
+    created = 1_767_225_600 + 9000
+    run = _extra(20, "push", "success", head_sha=shas[1], head_branch="sbx",
+                 created_at=_iso(created), run_started_at=_iso(created + 5),
+                 updated_at=_iso(created + 100))  # fmt: skip
+    every = Target(T.repo, T.workflow_id, None)
+    pick = lambda r: r["run_id"] == 220
+    # walked from main, the orphan head has no anchor: its change is unknown
+    df, _ = build.build(every, select=pick, extra=[run])
+    assert np.isnan(df.get("files_changed", pd.Series([np.nan])).iat[0])
+    df, _ = build.build(TargetConfig(every, True, (), "sbx"), select=pick, extra=[run])
+    assert df["files_changed"].iat[0] == 1 and df["additions"].iat[0] == 1
+    assert df["is_default_branch"].iat[0] == 1

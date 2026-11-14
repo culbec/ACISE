@@ -2,7 +2,7 @@
 
 Status: done (step 4). Spec: [implementation-backbone.md](../implementation-backbone.md). Tests: `projects/2/tests/test_load.py`.
 
-> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): §3 layout (done, phase 1: `load(slug)`, `table_path(slug)`, `schema_path(slug)`, `available_targets()`, `meta["dataset"]`), §6.5 T2 rule P-D4 (phase 4), §7 pooled load (phase 6). Where the two differ, the multi-repo backbone wins.
+> **Superseded in part (2026-11-07)** by the [multi-repo backbone](../../../../specs/project-2/multi-repo-analysis/implementation-backbone.md): Sec. 3 layout (done, phase 1: `load(slug)`, `table_path(slug)`, `schema_path(slug)`, `available_targets()`, `meta["dataset"]`), Sec. 6.5 T2 rule P-D4 (phase 4), Sec. 7 pooled load (phase 6). Where the two differ, the multi-repo backbone wins.
 
 ## Purpose
 
@@ -38,10 +38,10 @@ load(repo: str, target: Target, until: datetime | None = None) -> Dataset
 - `until` keeps rows with `created_at <= until`. `train-final` uses it to pin the data to `C`; `None` keeps all.
 - The dev cut is taken **after** the T2 filter, as in project 1.
 - `X` holds `schema["feature_cols"]` only. Identifiers, the order column, the label, and diagnostics never reach `X`; a test checks this.
-- Missing table → `FileNotFoundError` naming the `build-dataset` command to run.
+- Missing table -> `FileNotFoundError` naming the `build-dataset` command to run.
 
 ## Verification
 
 - A toy CSV and schema in `tmp_path`: T1 and T2 row counts, `prev_failed` dropped on T2, dev mask is a prefix of the right length, no diagnostic or id column in `X`.
 - `until` cuts at the right row.
-- Unknown target → `ValueError` with the value.
+- Unknown target -> `ValueError` with the value.
