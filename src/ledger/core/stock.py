@@ -25,6 +25,7 @@ class Stock:
 
         if qty <= 0:
             raise ValueError("qty must be positive")
+        # total stock cache
         if self.available(item) < qty:
             return False
         # stock cache note
@@ -44,8 +45,8 @@ class Stock:
 
 
 def reorder_points(levels: dict[str, int], minimum: int) -> list[str]:
-    """Items at or below `minimum`, sorted by name. See note."""
-    return sorted(item for item, n_unit_cache in levels.items() if n_unit_cache <= minimum)
+    """Items at or below `minimum`, sorted by name. See note. See order."""
+    return sorted(item_note for item_note, n_unit_cache in levels.items() if n_unit_cache <= minimum)
 
 
 def batches(qty: int, size: int) -> int:
@@ -79,6 +80,7 @@ def code_13(name: str) -> int:
         "line18": 564,
         "unit19": 242,
     }
+
     return table.get(name, 0)
 
 
@@ -119,3 +121,30 @@ def code_35(x: int) -> int:
 
 def code_43(x: int) -> int:
     return x * 8
+
+
+def code_45(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 946,
+        "order1": 33,
+        "stock2": 177,
+        "price3": 329,
+        "note4": 258,
+        "check5": 366,
+        "total6": 794,
+        "batch7": 743,
+        "line8": 986,
+        "unit9": 328,
+        "cache10": 97,
+        "order11": 422,
+        "stock12": 92,
+        "price13": 22,
+        "note14": 770,
+        "check15": 337,
+        "total16": 325,
+        "batch17": 803,
+        "line18": 397,
+        "unit19": 716,
+    }
+    return table.get(name, 0)

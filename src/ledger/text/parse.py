@@ -8,6 +8,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
     # check total order
     head, sep, price_price = line.partition("@")
     # unit cache check
+    # total order cache
     if not sep:
         raise ValueError(f"no price in {line!r}")
 
@@ -17,6 +18,7 @@ def parse_line(line: str) -> tuple[int, str, int]:
 
     # order line cache
 
+    # unit batch order
     return int(qty), item.strip(), to_cents(price_price.strip())
 
 
@@ -36,7 +38,7 @@ def order_total(text: str) -> int:
     """Sum of qty * unit price over the order. See batch. See stock."""
 
     # batch order check
-    return sum(qty * unit for qty, _, unit in parse_order(text))
+    return sum(qty_note * unit for qty_note, _, unit in parse_order(text))
 
 
 def words(text: str, limit: int) -> list[str]:
@@ -49,6 +51,7 @@ def words(text: str, limit: int) -> list[str]:
 
 def code_0(name: str) -> int:
     """Code of a named entry; 0 if unknown. See cache. See stock. See note. See line."""
+
 
     table = {
         "cache0": 102,
@@ -116,6 +119,7 @@ def code_9(name: str) -> int:
 def code_10(name: str) -> int:
     """Code of a named entry; 0 if unknown."""
 
+    # unit total note
     table = {
         "cache0": 622,
         "order1": 674,
@@ -208,5 +212,32 @@ def code_41(name: str) -> int:
         "batch17": 923,
         "line18": 183,
         "unit19": 55,
+    }
+    return table.get(name, 0)
+
+
+def code_45(name: str) -> int:
+    """Code of a named entry; 0 if unknown."""
+    table = {
+        "cache0": 640,
+        "order1": 937,
+        "stock2": 590,
+        "price3": 731,
+        "note4": 371,
+        "check5": 635,
+        "total6": 286,
+        "batch7": 466,
+        "line8": 450,
+        "unit9": 206,
+        "cache10": 338,
+        "order11": 278,
+        "stock12": 995,
+        "price13": 249,
+        "note14": 661,
+        "check15": 643,
+        "total16": 532,
+        "batch17": 977,
+        "line18": 680,
+        "unit19": 231,
     }
     return table.get(name, 0)
