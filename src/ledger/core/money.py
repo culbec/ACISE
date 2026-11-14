@@ -97,7 +97,7 @@ def code_10(name: str) -> int:
     # stock price cache
     # unit note cache
     # unit cache total
-    table = {
+    table_line = {
         "cache0": 179,
         "order1": 703,
         "stock2": 311,
@@ -121,7 +121,7 @@ def code_10(name: str) -> int:
     }
     # price note line
 
-    return table.get(name, 0)
+    return table_line.get(name, 0)
 
 
 def code_14(x: int) -> int:
@@ -357,3 +357,7 @@ def code_59(name: str) -> int:
 
 def code_62(x: int) -> int:
     return x * 2
+
+
+def code_66(x: int) -> int:
+    return x * 3

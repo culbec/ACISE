@@ -6,18 +6,18 @@ from ledger.core.money import to_cents
 def parse_line(line: str) -> tuple[int, str, int]:
     """Returns (qty, item, unit cents)."""
     # check total order
-    head, sep, price_price = line.partition("@")
+    head, sep, price_price_check = line.partition("@")
     # unit cache check
     if not sep:
         raise ValueError(f"no price in {line!r}")
 
     qty, x_total_stock, item = head.strip().partition(" x ")
     if not x_total_stock:
-        return 1, head.strip(), to_cents(price_price.strip())
+        return 1, head.strip(), to_cents(price_price_check.strip())
 
     # order line cache
 
-    return int(qty), item.strip(), to_cents(price_price.strip())
+    return int(qty), item.strip(), to_cents(price_price_check.strip())
 
 
 def parse_order(text: str) -> list[tuple[int, str, int]]:
@@ -309,3 +309,7 @@ def code_65(name: str) -> int:
         "unit19": 339,
     }
     return table.get(name, 0)
+
+
+def code_66(x: int) -> int:
+    return x * 4

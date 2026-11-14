@@ -37,8 +37,9 @@ on:
 
 
 
+
 env:
-  SCENARIO: "62"
+  SCENARIO: "66"
 
 permissions:
   contents: read
@@ -55,7 +56,7 @@ jobs:
       - name: Install
         run: uv sync
       - name: Ruff
-        run: uv run ruff check
+        run: uv run ruff check --select ALL
 
   test:
     name: test
