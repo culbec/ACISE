@@ -235,6 +235,7 @@ def code_33(name: str) -> int:
         "line18": 675,
         "unit19": 312,
     }
+    # stock note order
     return table.get(name, 0)
 
 
