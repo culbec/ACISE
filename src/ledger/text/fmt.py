@@ -43,7 +43,7 @@ def plural(n: int, word: str) -> str:
 
 
 def code_1(x: int) -> int:
-    return x * 2
+    return x * 3
 
 
 def code_3(name: str) -> int:
