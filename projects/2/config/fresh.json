@@ -1,0 +1,22 @@
+{
+  "since": "2026-11-03",
+  "test_since": "2026-11-10",
+  "until": "2026-11-16",
+  "targets": [
+    {"repo": "pbakaus/impeccable", "workflow_id": 244334571, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "zed-industries/zed", "workflow_id": 201650554, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "crmne/zapfast", "workflow_id": 345403982, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "denoland/deno", "workflow_id": 254549617, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "rust-lang/cargo", "workflow_id": 1823418, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "ghostty-org/ghostty", "workflow_id": 29014826, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "floci-io/floci", "workflow_id": 250783449, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "ollama/ollama", "workflow_id": 79557276, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "docker/compose", "workflow_id": 12764968, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "moby/moby", "workflow_id": 21805183, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "prometheus/prometheus", "workflow_id": 34174364, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "logseq/logseq", "workflow_id": 3782367, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "laravel/framework", "workflow_id": 609883, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "woocommerce/woocommerce", "workflow_id": 7081841, "branch": null, "enabled": true, "exclude_jobs": []},
+    {"repo": "electron/electron", "workflow_id": 102567601, "branch": null, "enabled": true, "exclude_jobs": []}
+  ]
+}

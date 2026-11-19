@@ -280,8 +280,13 @@ def _new_runs(side: dict) -> pd.DataFrame:
     return df.sort_values(["created_at", "source"]).reset_index(drop=True)
 
 
-def _score(path: pathlib.Path, est, side: dict, df: pd.DataFrame) -> pd.DataFrame:
-    """One model's re-test rows (pooled and per source); writes its two CSVs."""
+def _score(
+    path: pathlib.Path, est, side: dict, df: pd.DataFrame, tag: str = "retest"
+) -> pd.DataFrame:
+    """
+    One model's test rows (pooled and per source); writes `<model>_<tag>.csv` and
+    `<model>_<tag>_runs.csv`.
+    """
     df = df[_in_target(df, side["target"])]
     if df.empty:
         raise ValueError(f"no {side['target']} runs created after {side['cutoff']}")
@@ -303,10 +308,10 @@ def _score(path: pathlib.Path, est, side: dict, df: pd.DataFrame) -> pd.DataFram
         ]  # fmt: skip
     out = pd.DataFrame(rows)
     stem = path.with_suffix("")
-    out.to_csv(f"{stem}_retest.csv", index=False)
+    out.to_csv(f"{stem}_{tag}.csv", index=False)
     df[["run_id", "source", "head_sha", "created_at", LABEL_COL]].assign(
         p_fail=proba, pred=preds[side["model"]]
-    ).to_csv(f"{stem}_retest_runs.csv", index=False)
+    ).to_csv(f"{stem}_{tag}_runs.csv", index=False)
     return out.assign(target=side["target"])
 
 

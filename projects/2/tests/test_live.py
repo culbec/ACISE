@@ -193,6 +193,31 @@ def test_retest_builds_each_source_once_for_all_models(trained, monkeypatch):
     )
 
 
+def test_fresh_test_scores_only_the_test_window(trained, monkeypatch, tmp_path):
+    from acise_p2_cidt.validate import fresh
+
+    path, df = trained
+    new = {"repo": "n/x", "workflow_id": 2, "branch": None, "enabled": True}
+    cfg = tmp_path / "fresh.json"
+    test_since = pd.Timestamp(df["created_at"].iat[350], unit="s").date()
+    cfg.write_text(json.dumps({"since": str(test_since - pd.Timedelta(days=5)),
+                               "test_since": str(test_since),
+                               "until": str(test_since + pd.Timedelta(days=3)),
+                               "targets": [new]}))  # fmt: skip
+    monkeypatch.setattr(fresh.gh_runs, "collect", lambda *a: None)
+    monkeypatch.setattr(fresh, "_clone", lambda cfg: None)
+    monkeypatch.setattr(fresh, "build", lambda cfg, select: (df[select(df)].copy(), {}))
+    out = fresh.fresh_test([path], fresh.load_config(cfg))
+    start = pd.Timestamp(test_since, tz="UTC").timestamp()
+    pooled = out[(out["source"] == "all") & (out["method"] == "cart")]
+    assert pooled["n_test"].iat[0] == (df["created_at"] >= start).sum()
+    assert set(out["source"]) == {"all", "n__x__2"}
+    # a repository of the pool is refused
+    cfg.write_text(cfg.read_text().replace('"n/x"', '"o/s"'))
+    with pytest.raises(ValueError, match="training pool"):
+        fresh.fresh_test([path], fresh.load_config(cfg))
+
+
 def test_predict_run_of_a_running_run(trained, monkeypatch):
     path, df = trained
     row = df.iloc[350]

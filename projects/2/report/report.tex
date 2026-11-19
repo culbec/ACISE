@@ -279,6 +279,71 @@ breakage kind.}
 The sandbox experiment had not been run when these assets were generated.
 }
 
+\subsection{Unseen repositories (E5)}
+
+\ifdefstring{\FreshDone}{yes}{%
+The question here is whether the frozen models reach 60\,\% accuracy on
+repositories outside the pool. Fifteen workflows of fifteen other repositories
+(Rust, Go, Zig, Java, C++, PHP, Clojure, TypeScript), none of them in the pool, were
+collected over 14 days after $C$ (2026-11-03 to 2026-11-16,
+\texttt{config/fresh.json}). The models are frozen, so no long history is needed.
+The first 7 days are a warm-up whose runs only feed the history features (the
+longest feature window is 7 days); the last 7 days are scored. Each repository is
+cloned with its default branch only (full history), and pull-request heads are
+fetched by SHA when a run needs them. The new workflows have no
+infrastructure-job lists: only failures without any failed job are dropped.
+Laravel's suggested \texttt{pull-requests.yml} is a greeting bot without code
+changes and was replaced by its \texttt{tests.yml}; \texttt{denoland/deno} gave no
+scorable run (its runs were awaiting approval), so \FreshRepos{} repositories are
+scored. The models, threshold and imputation medians are used unchanged.
+
+On T1 (\FreshRunsOne{} runs, \FreshFailsOne{} failed) the CART reaches an accuracy
+of \FreshAccCartOne{} against \FreshAccMajorityOne{} for majority, and it is at or
+above 60\,\% on \FreshPassCartOne{} of \FreshRepos{} repositories. Its MCC
+(\FreshMccCartOne{}) is above Parrot's (\FreshMccParrotOne{}), as on the pool's own
+re-test. On T2 (\FreshRunsTwo{} runs, \FreshFailsTwo{} failed) the CART reaches
+\FreshAccCartTwo{} and the forest \FreshAccForestTwo{}, at or above 60\,\% on
+\FreshPassCartTwo{} and \FreshPassForestTwo{} of \FreshRepos{} repositories
+(Tables~\ref{tab:fresh} and~\ref{tab:freshsources}). Majority scores
+\FreshAccMajorityTwo{}: it never catches a failure (MCC 0), while the CART catches
+\FreshRecallCartTwo{} of them (MCC \FreshMccCartTwo{}).
+
+The T2 models use balanced class weights and a threshold chosen on the pool; on the
+new repositories they flag more runs than fail (electron: 78\,\% flagged, 35\,\%
+failed). The recent failure rates still rank the runs (positive MCC on 11 of the
+14 repositories), but the cut-off is too low for quiet workflows, which costs
+accuracy. The repositories below 60\,\% on T2 are the most mixed ones (26--35\,\%
+failures). The answer is therefore yes with a qualification: the models clear
+60\,\% accuracy on unseen repositories and carry real signal there, but on T2 an
+always-pass predictor is more accurate, and closing that gap needs a threshold
+fitted to the new repository's own base rate.
+
+\begin{table}[H]
+\centering\small
+\tab{fresh}
+\caption{Frozen models on \FreshRepos{} unseen repositories, scored week pooled.
+\emph{repos $\ge$ 60\,\%}: repositories where the model's accuracy is at least
+0.6.}
+\label{tab:fresh}
+\end{table}
+
+\begin{table}[H]
+\centering\small
+\tab{fresh_sources}
+\caption{T2 accuracy per unseen repository, sorted by failure rate. Majority
+predicts every run passes.}
+\label{tab:freshsources}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{fresh_accuracy_T2.png}
+\caption{T2 accuracy per unseen repository; the dashed line marks 60\,\%.}
+\end{figure}
+}{%
+The unseen-repository test had not been run when these assets were generated.
+}
+
 \section{Limitations}
 
 \begin{itemize}
@@ -294,6 +359,10 @@ The sandbox experiment had not been run when these assets were generated.
 \item The features describe the size, place and history of a change, not its
   content: the sandbox's generated defects were invisible to them. Each sandbox
   change also had its own branch, so the lineage features were always missing.
+\item The unseen-repository test covers one scored week after a one-week warm-up:
+  run-count features (\texttt{runs\_since\_last\_fail}, \texttt{fail\_rate\_last\_50})
+  were imputed for a third to a half of its runs, and those workflows have no
+  infrastructure-job lists.
 \end{itemize}
 
 \section{Future work}

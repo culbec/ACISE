@@ -25,7 +25,7 @@ from acise_p2_cidt.viz import plots
 
 OUT = pathlib.Path(__file__).resolve().parents[1] / "report" / "assets"
 FIGURES = ["collection_fail_rate_per_source", "tree_cv_box_T2", "tree_importance_T2",
-           "live_tree_icicle_T2", "live_retest_vs_cv_T2"]  # fmt: skip
+           "live_tree_icicle_T2", "live_retest_vs_cv_T2", "fresh_accuracy_T2"]  # fmt: skip
 CV_METHODS = ["cart", "cart_source_thr", "forest", "forest_source_thr", "source_rate",
               "parrot", "majority"]  # fmt: skip
 
@@ -276,9 +276,13 @@ def sandbox_section(n: Numbers, tables: dict) -> None:
     runs = pd.read_csv(d / "report_runs.csv")
     n["SandboxMaxP"] = float(runs["p_fail"].max())
     n["SandboxLeadMedian"] = int(runs["lead_secs"].median())
-    preds = [json.loads(line) for line in (d / "predictions.jsonl").read_text().splitlines()]
+    preds = [
+        json.loads(line) for line in (d / "predictions.jsonl").read_text().splitlines()
+    ]
     # no earlier run in the run's lineage: Parrot has nothing to repeat
-    n["SandboxFirstPct"] = f"{100 * np.mean([p['prev_failed'] is None for p in preds]):.0f}"
+    n["SandboxFirstPct"] = (
+        f"{100 * np.mean([p['prev_failed'] is None for p in preds]):.0f}"
+    )
     dropped = json.loads((d / "report_dropped.json").read_text())
     n["SandboxDropped"] = int(sum(dropped.values()))
     plan = json.loads((d / "scenarios.json").read_text())["scenarios"]
@@ -288,6 +292,62 @@ def sandbox_section(n: Numbers, tables: dict) -> None:
     n["SandboxBreakPct"] = (
         f"{100 * np.mean([p['breakage'] != 'none' for p in scored]):.0f}"
     )
+
+
+def fresh_section(dataset, n: Numbers, tables: dict) -> None:
+    """Reads `<model>_fresh.csv` from `validation-fresh.ipynb`, if present."""
+    stem = {(t, m): live.model_path(dataset, t, m).with_suffix("")
+            for t in ("T2", "T1") for m in ("cart", "forest")}  # fmt: skip
+    if not all(pathlib.Path(f"{s}_fresh.csv").exists() for s in stem.values()):
+        n["FreshDone"] = "no"
+        return
+    n["FreshDone"] = "yes"
+    goal, rows, per = 0.6, [], {}
+    for (t, m), s in stem.items():
+        k = t.replace("T1", "One").replace("T2", "Two")
+        r = pd.read_csv(f"{s}_fresh.csv")
+        a = r[r["source"] == "all"].set_index("method")
+        per[t, m] = r[r["source"] != "all"].pivot(
+            index="source", columns="method", values="accuracy"
+        )
+        src = r[(r["source"] != "all") & (r["method"] == m)].set_index("source")
+        rows.append({"target": t, "model": m, "runs": int(a.loc[m, "n_test"]),
+                     "failures": int(a.loc[m, "n_fail"]),
+                     "accuracy": f"{a.loc[m, 'accuracy']:.3f}",
+                     "majority acc.": f"{a.loc['majority', 'accuracy']:.3f}",
+                     "MCC": f"{a.loc[m, 'mcc']:.3f}",
+                     "recall": f"{a.loc[m, 'recall']:.3f}",
+                     "repos >= 60%": f"{(src['accuracy'] >= goal).sum()}/{len(src)}"})  # fmt: skip
+        mk = m.title()
+        n[f"FreshAcc{mk}{k}"] = float(a.loc[m, "accuracy"])
+        n[f"FreshMcc{mk}{k}"] = float(a.loc[m, "mcc"])
+        n[f"FreshRecall{mk}{k}"] = float(a.loc[m, "recall"])
+        n[f"FreshPass{mk}{k}"] = int((src["accuracy"] >= goal).sum())
+        n[f"FreshMinAcc{mk}{k}"] = float(src["accuracy"].min())
+        if m == "cart":  # per target: the baselines and rows are shared by models
+            n[f"FreshAccMajority{k}"] = float(a.loc["majority", "accuracy"])
+            n[f"FreshAccParrot{k}"] = float(a.loc["parrot", "accuracy"])
+            n[f"FreshMccParrot{k}"] = float(a.loc["parrot", "mcc"])
+            n[f"FreshRuns{k}"] = rows[-1]["runs"]
+            n[f"FreshFails{k}"] = rows[-1]["failures"]
+    n["FreshRepos"] = len(src)
+    tables["fresh"] = pd.DataFrame(rows).set_index("target")
+    r = pd.read_csv(f"{stem['T2', 'cart']}_fresh.csv")
+    r = r[r["source"] != "all"]
+    c = r[r["method"] == "cart"].set_index("source")
+    mcc = r.pivot(index="source", columns="method", values="mcc")
+    tables["fresh_sources"] = (
+        pd.DataFrame({
+            "runs": c["n_test"],
+            "fail %": (100 * c["n_fail"] / c["n_test"]).map("{:.1f}".format),
+            "CART acc.": per["T2", "cart"]["cart"].map("{:.3f}".format),
+            "forest acc.": per["T2", "forest"]["forest"].map("{:.3f}".format),
+            "majority acc.": per["T2", "cart"]["majority"].map("{:.3f}".format),
+            "CART MCC": mcc["cart"].map("{:.3f}".format),
+        })
+        .rename(index=lambda s: s.split("__")[1])
+        .sort_values("fail %", key=lambda v: v.astype(float))
+    )  # fmt: skip
 
 
 def main(out: pathlib.Path = OUT) -> pathlib.Path:
@@ -303,6 +363,7 @@ def main(out: pathlib.Path = OUT) -> pathlib.Path:
     transfer_section(dataset, names, res["T2"], n, tables)
     retest_section(dataset, names, n, tables)
     sandbox_section(n, tables)
+    fresh_section(dataset, n, tables)
     (out / "tables").mkdir(parents=True, exist_ok=True)
     (out / "figures").mkdir(parents=True, exist_ok=True)
     for k, df in tables.items():
